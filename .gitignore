@@ -1,0 +1,7 @@
+node_modules/
+.env
+dist/
+pinkfoot-api/data/
+pinkfoot-api/uploads/
+.DS_Store
+*.log

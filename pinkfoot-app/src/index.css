@@ -1,0 +1,128 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand colors */
+  --color-pink: #E85478;
+  --color-pink-light: #F9768F;
+  --color-pink-pale: #FEF0F3;
+  --color-pink-mid: #F2C0CC;
+  --color-navy: #1B2A4A;
+  --color-navy-mid: #2D4272;
+  --color-navy-light: #E8EDF6;
+  --color-off-white: #F8F9FC;
+  --color-gold: #F59E0B;
+  --color-green: #10B981;
+
+  /* Fonts */
+  --font-display: "Fraunces", "Playfair Display", Georgia, serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
+
+  /* Custom radius */
+  --radius-pill: 9999px;
+
+  /* Shadows */
+  --shadow-card: 0 4px 24px rgba(27, 42, 74, 0.09);
+  --shadow-hover: 0 12px 40px rgba(232, 84, 120, 0.18);
+  --shadow-heavy: 0 24px 60px rgba(27, 42, 74, 0.16);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    font-family: var(--font-body);
+    color: var(--color-navy);
+    background: var(--color-off-white);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-sm font-bold text-white shadow-[0_4px_18px_rgba(232,84,120,0.35)] transition-all duration-200 hover:scale-[1.03] hover:shadow-[0_8px_28px_rgba(232,84,120,0.5)] active:scale-95;
+    background: linear-gradient(135deg, var(--color-pink) 0%, var(--color-pink-light) 100%);
+    letter-spacing: 0.3px;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border-2 px-7 py-3 text-sm font-semibold transition-all duration-200 hover:bg-[var(--color-pink)] hover:text-white;
+    border-color: var(--color-pink);
+    color: var(--color-pink);
+  }
+  .btn-navy {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-7 py-3 text-sm font-bold text-white transition-all duration-200 hover:opacity-90;
+    background: var(--color-navy);
+  }
+  .badge-pink {
+    @apply inline-block rounded-full px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white;
+    background: var(--color-pink);
+  }
+  .badge-navy {
+    @apply inline-block rounded-full px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white;
+    background: var(--color-navy);
+  }
+  .badge-green {
+    @apply inline-block rounded-full px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white;
+    background: var(--color-green);
+  }
+  .badge-soft {
+    @apply inline-block rounded-full px-3 py-1 text-[11px] font-semibold;
+    background: var(--color-pink-pale);
+    color: var(--color-pink);
+  }
+  .glass {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+  }
+  .container-page {
+    @apply mx-auto w-full max-w-[1280px] px-6;
+  }
+}
+
+/* Subtle scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-pink-mid); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-pink); }
+
+/* Marquee */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
+/* Float */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Ken Burns slow zoom for hero slides */
+@keyframes kenburns {
+  0%   { transform: scale(1.0)  translate(0%, 0%); }
+  100% { transform: scale(1.12) translate(-1.5%, -1%); }
+}
+
+/* Shimmer for skeletons */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
