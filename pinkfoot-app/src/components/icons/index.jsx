@@ -310,9 +310,14 @@ export function Check({ size = 18 }) {
   const controls = useCtrl();
   const v = getVariants({
     default: {
+      group: {
+        initial: { scale: 1 },
+        animate: { scale: [1, 1.25, 1], transition: { duration: 0.4 } },
+      },
       path: {
-        initial: { pathLength: 0 },
-        animate: { pathLength: 1, transition: { duration: 0.4 } },
+        // Default state is fully drawn (visible). Animation re-draws the stroke.
+        initial: { pathLength: 1 },
+        animate: { pathLength: [0.05, 1], transition: { duration: 0.5, ease: "easeOut" } },
       },
     },
   });

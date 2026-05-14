@@ -120,7 +120,7 @@ function Hero({ destinations }) {
   };
 
   return (
-    <section className="relative isolate flex min-h-screen items-center overflow-hidden">
+    <section className="relative isolate flex min-h-[100svh] items-center overflow-hidden">
       {/* Cinematic crossfade slideshow */}
       <div className="absolute inset-0 -z-20">
         {HERO_SLIDES.map((src, i) => (

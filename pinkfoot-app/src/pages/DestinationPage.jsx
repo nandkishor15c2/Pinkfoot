@@ -119,29 +119,33 @@ export default function DestinationPage() {
           subtitle="The unmissable hits — bookmark these for your trip."
         />
         <Carousel itemClassName="w-[220px] sm:w-[260px] lg:w-[300px]" gap={16}>
-          {dest.highlights.map((h, i) => (
-            <motion.div
-              key={h}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.4, delay: i * 0.07 }}
-              className="group relative overflow-hidden rounded-2xl shadow-[var(--shadow-card)]"
-            >
-              <img
-                src={dest.gallery?.[i % (dest.gallery?.length || 1)] || dest.heroImage}
-                alt={h}
-                className="h-44 w-full object-cover transition-transform duration-700 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-navy)] via-transparent to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 p-4">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-pink-light)]">
-                  Top {i + 1}
+          {dest.highlights.map((raw, i) => {
+            const h = typeof raw === "string" ? { name: raw, image: "" } : raw;
+            const img = h.image || dest.gallery?.[i % (dest.gallery?.length || 1)] || dest.heroImage;
+            return (
+              <motion.div
+                key={`${h.name}-${i}`}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.4, delay: i * 0.07 }}
+                className="group relative overflow-hidden rounded-2xl shadow-[var(--shadow-card)]"
+              >
+                <img
+                  src={img}
+                  alt={h.name}
+                  className="h-44 w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-navy)] via-transparent to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-4">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-pink-light)]">
+                    Top {i + 1}
+                  </div>
+                  <div className="font-display text-lg font-bold text-white">{h.name}</div>
                 </div>
-                <div className="font-display text-lg font-bold text-white">{h}</div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </Carousel>
       </section>
 

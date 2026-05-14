@@ -14,7 +14,7 @@
   --color-green: #10B981;
 
   /* Fonts */
-  --font-display: "Fraunces", "Playfair Display", Georgia, serif;
+  --font-display: "Lilita One", "Fraunces", Georgia, serif;
   --font-body: "DM Sans", system-ui, sans-serif;
 
   /* Custom radius */
@@ -38,8 +38,8 @@
   }
   h1, h2, h3, h4 {
     font-family: var(--font-display);
-    font-optical-sizing: auto;
-    letter-spacing: -0.02em;
+    font-weight: 400; /* Lilita One ships as a single weight */
+    letter-spacing: -0.005em;
   }
 }
 
