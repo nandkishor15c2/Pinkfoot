@@ -5,8 +5,6 @@ import {
   Icon,
   FacebookIcon,
   InstagramIcon,
-  TwitterIcon,
-  YoutubeIcon,
   Phone,
   Mail,
   MessageCircle,
@@ -167,8 +165,6 @@ export default function Footer() {
                 {[
                   { IconComp: FacebookIcon,  label: "Facebook", href: "https://www.facebook.com/share/14gbkCKE19W/" },
                   { IconComp: InstagramIcon, label: "Instagram", href: "https://www.instagram.com/pinkfoottravel?igsh=cDdwM2d2dmdnMzB5" },
-                  { IconComp: TwitterIcon,   label: "Twitter", href: "#" },
-                  { IconComp: YoutubeIcon,   label: "YouTube", href: "#" },
                 ].map((s) => (
                   <a
                     key={s.label}
