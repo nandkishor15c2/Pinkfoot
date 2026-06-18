@@ -40,7 +40,7 @@ const FRONTEND_DIST = path.resolve(__dirname, "..", "..", "pinkfoot-app", "dist"
 app.use(express.static(FRONTEND_DIST));
 
 // Handle client-side routing by serving index.html for non-API routes
-app.get("*", (req, res, next) => {
+app.get("/(.*)", (req, res, next) => {
   // Pass API requests that don't match any endpoints to the error handler or 404
   if (req.path.startsWith("/api/")) {
     return next();
