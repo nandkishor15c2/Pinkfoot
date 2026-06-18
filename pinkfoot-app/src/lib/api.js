@@ -1,4 +1,8 @@
-const BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
+const BASE = import.meta.env.VITE_API_BASE !== undefined
+  ? import.meta.env.VITE_API_BASE
+  : import.meta.env.DEV
+  ? "http://localhost:4000"
+  : "";
 const TOKEN_KEY = "pinkfoot_admin_token";
 
 export function getToken() {

@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import path from "node:path";
+import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import destinations from "./routes/destinations.js";
@@ -33,6 +34,24 @@ app.use("/api/leads", leads);
 app.use("/api/uploads", uploads);
 app.use("/api/stays", stays);
 app.use("/api/policies", policies);
+
+// Serve frontend built static assets
+const FRONTEND_DIST = path.resolve(__dirname, "..", "..", "pinkfoot-app", "dist");
+app.use(express.static(FRONTEND_DIST));
+
+// Handle client-side routing by serving index.html for non-API routes
+app.get("*", (req, res, next) => {
+  // Pass API requests that don't match any endpoints to the error handler or 404
+  if (req.path.startsWith("/api/")) {
+    return next();
+  }
+  const indexPath = path.join(FRONTEND_DIST, "index.html");
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send("Frontend build not found. Please run 'npm run build' in pinkfoot-app.");
+  }
+});
 
 app.use((err, _req, res, _next) => {
   console.error(err);

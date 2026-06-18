@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "seed": "node src/seed.js"
+    "seed": "node src/seed.js",
+    "build": "npm --prefix ../pinkfoot-app install && npm --prefix ../pinkfoot-app run build"
   },
   "keywords": [],
   "author": "",
