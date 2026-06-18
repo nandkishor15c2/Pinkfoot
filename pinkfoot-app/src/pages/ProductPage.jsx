@@ -60,11 +60,12 @@ function StayCard({ stay }) {
 
   const gallery = stay.gallery || stay.images || (stay.image ? [stay.image] : []);
   const currentImage = gallery[activeImageIdx] || stay.image;
+  const hasImage = !!currentImage;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-100 bg-[var(--color-off-white)] p-4 flex flex-col sm:flex-row gap-4">
-      <div className="flex flex-col gap-2 flex-shrink-0 w-full sm:w-44">
-        {currentImage && (
+      {hasImage && (
+        <div className="flex flex-col gap-2 flex-shrink-0 w-full sm:w-44">
           <div className="h-32 w-full overflow-hidden rounded-xl bg-gray-100 shadow-sm">
             <img
               src={currentImage}
@@ -72,24 +73,24 @@ function StayCard({ stay }) {
               className="h-full w-full object-cover transition-transform hover:scale-105 duration-300"
             />
           </div>
-        )}
-        {gallery.length > 1 && (
-          <div className="flex gap-1 overflow-x-auto pb-1 max-w-full scrollbar-thin">
-            {gallery.map((img, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setActiveImageIdx(i)}
-                className={`relative h-8 w-12 flex-shrink-0 overflow-hidden rounded-md border-2 transition cursor-pointer ${
-                  activeImageIdx === i ? "border-[var(--color-pink)] scale-95" : "border-transparent opacity-80 hover:opacity-100"
-                }`}
-              >
-                <img src={img} alt="" className="h-full w-full object-cover" />
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+          {gallery.length > 1 && (
+            <div className="flex gap-1 overflow-x-auto pb-1 max-w-full scrollbar-thin">
+              {gallery.map((img, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setActiveImageIdx(i)}
+                  className={`relative h-8 w-12 flex-shrink-0 overflow-hidden rounded-md border-2 transition cursor-pointer ${
+                    activeImageIdx === i ? "border-[var(--color-pink)] scale-95" : "border-transparent opacity-80 hover:opacity-100"
+                  }`}
+                >
+                  <img src={img} alt="" className="h-full w-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex-1 flex flex-col justify-between min-w-0">
         <div>
