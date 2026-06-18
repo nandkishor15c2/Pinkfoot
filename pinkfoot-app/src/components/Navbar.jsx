@@ -95,13 +95,6 @@ export default function Navbar() {
                 <span className="inline-flex items-center gap-1 font-semibold">
                   <Icon size={13}><Globe /></Icon> INR · English
                 </span>
-                <span className="text-white/25">·</span>
-                <Link
-                  to="/admin/login"
-                  className="font-semibold transition hover:text-[var(--color-pink-light)]"
-                >
-                  Agent sign in
-                </Link>
               </div>
             </div>
           </motion.div>

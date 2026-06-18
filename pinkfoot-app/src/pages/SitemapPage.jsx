@@ -34,7 +34,6 @@ export default function SitemapPage() {
         { label: "Privacy Policy", to: "/privacy" },
         { label: "Terms of Service", to: "/terms" },
         { label: "Cookie Policy", to: "/cookies" },
-        { label: "Agent Login", to: "/admin/login" },
       ],
     },
   ];
