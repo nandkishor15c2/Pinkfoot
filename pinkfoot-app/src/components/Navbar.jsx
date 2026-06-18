@@ -77,10 +77,10 @@ export default function Navbar() {
             <div className="container-page flex h-9 items-center justify-between text-[12px] text-white/85">
               <div className="flex items-center gap-5">
                 <a
-                  href="tel:+919876543210"
+                  href="tel:+918109030897"
                   className="inline-flex items-center gap-1.5 font-semibold transition hover:text-[var(--color-pink-light)]"
                 >
-                  <Icon size={13} animateOnHover><Phone /></Icon> +91 98765 43210
+                  <Icon size={13} animateOnHover><Phone /></Icon> +91 8109030897
                 </a>
                 <span className="hidden text-white/25 lg:inline">·</span>
                 <span className="hidden items-center gap-1.5 lg:inline-flex">

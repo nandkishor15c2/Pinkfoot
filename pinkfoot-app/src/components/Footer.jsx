@@ -60,12 +60,6 @@ const valueProps = [
   { IconComp: Heart,    label: "10,000+ Happy Travellers" },
 ];
 
-const offices = [
-  { city: "Mumbai", line: "Bandra Kurla Complex" },
-  { city: "Delhi",  line: "Connaught Place" },
-  { city: "Bangalore", line: "Indiranagar" },
-];
-
 export default function Footer() {
   const { data: destinations } = useDestinations();
   const featured = (destinations || []).slice(0, 6);
@@ -114,9 +108,9 @@ export default function Footer() {
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             {[
-              { IconComp: Phone,         label: "Call us",   value: "+91 98765 43210", href: "tel:+919876543210" },
-              { IconComp: MessageCircle, label: "WhatsApp",  value: "Chat now",        href: "https://wa.me/919876543210" },
-              { IconComp: Mail,          label: "Email",     value: "hello@pinkfoot.travel", href: "mailto:hello@pinkfoot.travel" },
+              { IconComp: Phone,         label: "Call us",   value: "+91 8109030897", href: "tel:+918109030897" },
+              { IconComp: MessageCircle, label: "WhatsApp",  value: "Chat now",        href: "https://wa.me/918109030897" },
+              { IconComp: Mail,          label: "Email",     value: "info@pinkfoottravel.com", href: "mailto:info@pinkfoottravel.com" },
             ].map((c) => (
               <a
                 key={c.label}
@@ -260,21 +254,26 @@ export default function Footer() {
           ))}
         </div>
 
-        {/* Offices row — passport-stamp-y */}
-        <div className="mt-12 grid gap-4 border-t border-white/10 pt-6 sm:grid-cols-3">
-          {offices.map((o) => (
-            <div key={o.city} className="flex items-start gap-3">
-              <span className="mt-0.5 grid h-9 w-9 flex-shrink-0 place-items-center rounded-full border-2 border-dashed border-white/25 text-[var(--color-pink-light)]">
-                <Icon size={14}><MapPin /></Icon>
-              </span>
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-white/50">
-                  Office · {o.city}
-                </div>
-                <div className="text-sm font-semibold">{o.line}</div>
+        {/* Registered Office */}
+        <div className="mt-12 border-t border-white/10 pt-6">
+          <a
+            href="https://maps.google.com/?q=First+Floor+-+27,+Kailash+Puri,+Opp+Sai+Baba+Mandir,+near+Khandaka+Hospital,+Tonk+Road,+Jaipur+-+302018,+Rajasthan"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-start gap-3 max-w-2xl transition hover:text-[var(--color-pink-light)]"
+          >
+            <span className="mt-0.5 grid h-9 w-9 flex-shrink-0 place-items-center rounded-full border-2 border-dashed border-white/25 text-[var(--color-pink-light)] group-hover:border-[var(--color-pink-light)]/60">
+              <Icon size={14}><MapPin /></Icon>
+            </span>
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-white/50 group-hover:text-white/70">
+                Registered Office
+              </div>
+              <div className="text-sm font-semibold leading-relaxed">
+                First Floor - 27, Kailash Puri, Opp Sai Baba Mandir, near Khandaka Hospital, Tonk Road, Jaipur - 302018, Rajasthan
               </div>
             </div>
-          ))}
+          </a>
         </div>
       </section>
 
