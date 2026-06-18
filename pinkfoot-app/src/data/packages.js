@@ -221,18 +221,54 @@ export const packages = [
     metaKeywords:
       "Rajasthan tour, Jaipur travel, Jodhpur heritage, Udaipur vacation, India tour packages, royal Rajasthan, heritage travel India, luxury Rajasthan tour",
     hotels: [
+      // Standard
       {
-        id: "HTL-001",
+        id: "HTL-STD-001",
+        name: "Umaid Bhawan Jaipur",
+        address: "Bani Park, Jaipur, Rajasthan",
+        contactNumber: "+91-141-2201616",
+        contactEmail: "reservations@umaidbhawan.com",
+        mapUrl: "https://maps.google.com/?q=26.9298,75.7973",
+        starCategory: 3,
+        propertyType: "Heritage Hotel",
+        category: "standard"
+      },
+      {
+        id: "HTL-STD-002",
+        name: "Haveli Inn Pal Jodhpur",
+        address: "Gulab Sagar, Jodhpur, Rajasthan",
+        contactNumber: "+91-291-2612588",
+        contactEmail: "stay@haveliinnpal.com",
+        mapUrl: "https://maps.google.com/?q=26.2952,73.0270",
+        starCategory: 3,
+        propertyType: "Standard Heritage Haveli",
+        category: "standard"
+      },
+      {
+        id: "HTL-STD-003",
+        name: "Hotel Mewar Castle Udaipur",
+        address: "Lal Ghat, Udaipur, Rajasthan",
+        contactNumber: "+91-294-2410777",
+        contactEmail: "mewarcastle@gmail.com",
+        mapUrl: "https://maps.google.com/?q=24.5791,73.6828",
+        starCategory: 3,
+        propertyType: "Standard Lake View Haveli",
+        category: "standard"
+      },
+      // Deluxe
+      {
+        id: "HTL-DLX-001",
         name: "The Pink Palace Jaipur",
         address: "12 Amer Road, Jaipur, Rajasthan 302002",
         contactNumber: "+91-141-2345678",
         contactEmail: "reservations@pinkpalacejaipur.com",
         mapUrl: "https://maps.google.com/?q=26.9855,75.8527",
-        starCategory: 5,
+        starCategory: 4,
         propertyType: "Heritage Hotel",
+        category: "deluxe"
       },
       {
-        id: "HTL-002",
+        id: "HTL-DLX-002",
         name: "The Blue City Haveli",
         address: "34 Clock Tower Road, Jodhpur, Rajasthan 342001",
         contactNumber: "+91-291-2435678",
@@ -240,9 +276,44 @@ export const packages = [
         mapUrl: "https://maps.google.com/?q=26.2986,73.0243",
         starCategory: 4,
         propertyType: "Heritage Haveli",
+        category: "deluxe"
       },
       {
-        id: "HTL-003",
+        id: "HTL-DLX-003",
+        name: "Udaipur Heritage Resort",
+        address: "Pichola Lake, Udaipur, Rajasthan 313001",
+        contactNumber: "+91-294-2428800",
+        contactEmail: "deluxe@udaipurresort.com",
+        mapUrl: "https://maps.google.com/?q=24.5711,73.6789",
+        starCategory: 4,
+        propertyType: "4★ Lake View Resort",
+        category: "deluxe"
+      },
+      // Luxury
+      {
+        id: "HTL-LXR-001",
+        name: "Rambagh Palace Jaipur",
+        address: "Bhawani Singh Road, Jaipur, Rajasthan 302005",
+        contactNumber: "+91-141-2385700",
+        contactEmail: "rambagh.jaipur@tajhotels.com",
+        mapUrl: "https://maps.google.com/?q=26.8981,75.8087",
+        starCategory: 5,
+        propertyType: "5★ Royal Heritage Palace",
+        category: "luxury"
+      },
+      {
+        id: "HTL-LXR-002",
+        name: "Taj Umaid Bhawan Palace Jodhpur",
+        address: "Circuit House Road, Jodhpur, Rajasthan 342006",
+        contactNumber: "+91-291-2510101",
+        contactEmail: "umaid.jodhpur@tajhotels.com",
+        mapUrl: "https://maps.google.com/?q=26.2811,73.0475",
+        starCategory: 5,
+        propertyType: "5★ Luxury Heritage Palace",
+        category: "luxury"
+      },
+      {
+        id: "HTL-LXR-003",
         name: "Taj Lake Palace Udaipur",
         address: "Pichola, Udaipur, Rajasthan 313001",
         contactNumber: "+91-294-2428800",
@@ -250,17 +321,21 @@ export const packages = [
         mapUrl: "https://maps.google.com/?q=24.5754,73.6800",
         starCategory: 5,
         propertyType: "Luxury Heritage Palace",
-      },
+        category: "luxury"
+      }
     ],
     transfers: [
       { id: "TRF-001", title: "Jaipur to Jodhpur Transfer", vehicle: "Toyota Innova Crysta", occupancy: 6 },
       { id: "TRF-002", title: "Jodhpur to Udaipur Transfer", vehicle: "Tempo Traveller", occupancy: 12 },
     ],
-    paymentPolicy: {
-      name: "Standard Installment Plan",
-      terms:
-        "30% at booking, 40% 60 days before departure, remaining 30% 30 days before departure. Free cancellation up to 45 days before departure. 50% refund between 44–30 days. No refund after 30 days.",
-    },
+    paymentPolicy: [
+      {
+        id: "pol-standard",
+        name: "Standard Installment Plan",
+        terms:
+          "30% at booking, 40% 60 days before departure, remaining 30% 30 days before departure. Free cancellation up to 45 days before departure. 50% refund between 44–30 days. No refund after 30 days.",
+      }
+    ],
     itinerary: [
       {
         day: 1,

@@ -96,6 +96,31 @@ CREATE TABLE IF NOT EXISTS leads (
   status        TEXT DEFAULT 'new',
   created_at    TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS stays (
+  id              TEXT PRIMARY KEY,
+  name            TEXT NOT NULL,
+  property_type   TEXT,
+  star_category   INTEGER,
+  tier            TEXT,
+  destination     TEXT,
+  contact_number  TEXT,
+  contact_email   TEXT,
+  address         TEXT,
+  map_url         TEXT,
+  image           TEXT,
+  description     TEXT,
+  created_at      TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS policies (
+  id          TEXT PRIMARY KEY,
+  name        TEXT NOT NULL,
+  terms       TEXT NOT NULL,
+  created_at  TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TEXT DEFAULT CURRENT_TIMESTAMP
+);
 `);
 
 // --- Migrations (idempotent, additive) ---
@@ -116,6 +141,7 @@ addCol("packages", "tags", "TEXT");           // JSON array
 addCol("packages", "hotels", "TEXT");         // JSON array of hotel objects
 addCol("packages", "transfers", "TEXT");      // JSON array of transfer objects
 addCol("packages", "payment_policy", "TEXT"); // JSON {name, terms}
+addCol("packages", "category_pricing", "TEXT"); // JSON string containing standard, deluxe, luxury pricing
 
 // Destinations: seasons, activity, region taxonomy
 addCol("destinations", "travel_season_start", "TEXT");
@@ -190,7 +216,43 @@ export function rowToPackage(r) {
     tags: JSON.parse(r.tags || "[]"),
     hotels: JSON.parse(r.hotels || "[]"),
     transfers: JSON.parse(r.transfers || "[]"),
-    paymentPolicy: r.payment_policy ? JSON.parse(r.payment_policy) : null,
+    paymentPolicies: r.payment_policy ? (
+      Array.isArray(JSON.parse(r.payment_policy)) ? JSON.parse(r.payment_policy) : [JSON.parse(r.payment_policy)]
+    ) : [],
+    categoryPricing: r.category_pricing ? JSON.parse(r.category_pricing) : null,
     published: !!r.published,
+  };
+}
+
+export function rowToStay(r) {
+  if (!r) return null;
+  const parsedImages = r.image ? (
+    r.image.startsWith("[") ? JSON.parse(r.image) : [r.image]
+  ) : [];
+  return {
+    id: r.id,
+    name: r.name,
+    propertyType: r.property_type,
+    starCategory: r.star_category,
+    tier: r.tier,
+    destination: r.destination,
+    contactNumber: r.contact_number,
+    contactEmail: r.contact_email,
+    address: r.address,
+    mapUrl: r.map_url,
+    image: parsedImages[0] || "",
+    images: parsedImages,
+    description: r.description,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}export function rowToPolicy(r) {
+  if (!r) return null;
+  return {
+    id: r.id,
+    name: r.name,
+    terms: r.terms,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
   };
 }

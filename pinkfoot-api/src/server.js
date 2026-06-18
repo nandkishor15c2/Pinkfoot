@@ -10,6 +10,8 @@ import reviews from "./routes/reviews.js";
 import leads from "./routes/leads.js";
 import auth from "./routes/auth.js";
 import uploads from "./routes/uploads.js";
+import stays from "./routes/stays.js";
+import policies from "./routes/policies.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -29,6 +31,8 @@ app.use("/api/packages", packages);
 app.use("/api/reviews", reviews);
 app.use("/api/leads", leads);
 app.use("/api/uploads", uploads);
+app.use("/api/stays", stays);
+app.use("/api/policies", policies);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

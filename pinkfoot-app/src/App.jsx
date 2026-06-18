@@ -19,6 +19,8 @@ import AdminPackagesPage from "./pages/admin/AdminPackagesPage.jsx";
 import AdminPackageForm from "./pages/admin/AdminPackageForm.jsx";
 import AdminDestinationsPage from "./pages/admin/AdminDestinationsPage.jsx";
 import AdminLeadsPage from "./pages/admin/AdminLeadsPage.jsx";
+import AdminStaysPage from "./pages/admin/AdminStaysPage.jsx";
+import AdminPoliciesPage from "./pages/admin/AdminPoliciesPage.jsx";
 
 export default function App() {
   return (
@@ -50,6 +52,8 @@ export default function App() {
             <Route path="packages/new" element={<AdminPackageForm />} />
             <Route path="packages/:id" element={<AdminPackageForm />} />
             <Route path="destinations" element={<AdminDestinationsPage />} />
+            <Route path="stays" element={<AdminStaysPage />} />
+            <Route path="policies" element={<AdminPoliciesPage />} />
             <Route path="leads" element={<AdminLeadsPage />} />
           </Route>
 

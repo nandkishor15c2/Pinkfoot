@@ -6,6 +6,14 @@ import ImageUpload from "../../components/ImageUpload.jsx";
 const THEMES = ["Honeymoon", "Family", "Adventure", "Luxury", "Beach", "Culture", "Shopping"];
 const BADGES = ["", "Best Seller", "Premium", "Hot Deal", "Family Favourite", "Family Pick", "Weekend Deal"];
 
+const slugify = (s) =>
+  s
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
 const EMPTY = {
   title: "",
   slug: "",
@@ -32,7 +40,12 @@ const EMPTY = {
   itinerary: [],
   hotels: [],
   transfers: [],
-  paymentPolicy: { name: "", terms: "" },
+  paymentPolicies: [],
+  categoryPricing: {
+    standard: { originalPriceAdult: 0, originalPriceChild: 0, discount: 0, priceAdult: 0, priceChild: 0 },
+    deluxe: { originalPriceAdult: 0, originalPriceChild: 0, discount: 0, priceAdult: 0, priceChild: 0 },
+    luxury: { originalPriceAdult: 0, originalPriceChild: 0, discount: 0, priceAdult: 0, priceChild: 0 }
+  },
   published: true,
 };
 
@@ -43,6 +56,8 @@ export default function AdminPackageForm() {
 
   const [form, setForm] = useState(EMPTY);
   const [destinations, setDestinations] = useState([]);
+  const [stays, setStays] = useState([]);
+  const [availablePolicies, setAvailablePolicies] = useState([]);
   const [coverFile, setCoverFile] = useState(null);
   const [galleryFiles, setGalleryFiles] = useState([]);
   const [existingCover, setExistingCover] = useState("");
@@ -52,6 +67,8 @@ export default function AdminPackageForm() {
 
   useEffect(() => {
     api.adminListDestinations().then(setDestinations).catch(() => {});
+    api.adminListStays().then(setStays).catch(() => {});
+    api.adminListPolicies().then(setAvailablePolicies).catch(() => {});
     if (isEdit) {
       api.adminListPackages().then((items) => {
         const p = items.find((x) => x.id === id);
@@ -82,7 +99,12 @@ export default function AdminPackageForm() {
           itinerary: p.itinerary || [],
           hotels: p.hotels || [],
           transfers: p.transfers || [],
-          paymentPolicy: p.paymentPolicy || { name: "", terms: "" },
+          paymentPolicies: p.paymentPolicies || [],
+          categoryPricing: p.categoryPricing || {
+            standard: { originalPriceAdult: p.originalPrice || 0, originalPriceChild: p.price?.child || 0, discount: p.discount || 0, priceAdult: p.price?.adult || 0, priceChild: p.price?.child || 0 },
+            deluxe: { originalPriceAdult: 0, originalPriceChild: 0, discount: 0, priceAdult: 0, priceChild: 0 },
+            luxury: { originalPriceAdult: 0, originalPriceChild: 0, discount: 0, priceAdult: 0, priceChild: 0 }
+          },
           published: p.published,
         });
         setExistingCover(p.coverImage || "");
@@ -94,6 +116,40 @@ export default function AdminPackageForm() {
   const update = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const toggleTheme = (t) =>
     update("theme", form.theme.includes(t) ? form.theme.filter((x) => x !== t) : [...form.theme, t]);
+
+  const handleTierPriceChange = (tier, field, val) => {
+    setForm((f) => {
+      const currentPricing = f.categoryPricing || {
+        standard: { originalPriceAdult: 0, originalPriceChild: 0, discount: 0, priceAdult: 0, priceChild: 0 },
+        deluxe: { originalPriceAdult: 0, originalPriceChild: 0, discount: 0, priceAdult: 0, priceChild: 0 },
+        luxury: { originalPriceAdult: 0, originalPriceChild: 0, discount: 0, priceAdult: 0, priceChild: 0 }
+      };
+      
+      const tierObj = { ...currentPricing[tier], [field]: val };
+      
+      const discount = tierObj.discount || 0;
+      tierObj.priceAdult = Math.round(tierObj.originalPriceAdult * (1 - discount / 100));
+      tierObj.priceChild = Math.round(tierObj.originalPriceChild * (1 - discount / 100));
+      
+      const nextPricing = { ...currentPricing, [tier]: tierObj };
+      
+      let extra = {};
+      if (tier === "standard") {
+        extra = {
+          priceAdult: tierObj.priceAdult,
+          priceChild: tierObj.priceChild,
+          originalPrice: tierObj.originalPriceAdult,
+          discount: tierObj.discount
+        };
+      }
+      
+      return {
+        ...f,
+        ...extra,
+        categoryPricing: nextPricing
+      };
+    });
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -128,8 +184,11 @@ export default function AdminPackageForm() {
         itinerary: JSON.stringify(form.itinerary.filter((d) => d.title)),
         hotels: JSON.stringify(form.hotels.filter((h) => h.name)),
         transfers: JSON.stringify(form.transfers.filter((t) => t.title)),
-        paymentPolicy: form.paymentPolicy?.terms
-          ? JSON.stringify(form.paymentPolicy)
+        paymentPolicy: form.paymentPolicies && form.paymentPolicies.length > 0
+          ? JSON.stringify(form.paymentPolicies)
+          : "",
+        categoryPricing: form.categoryPricing
+          ? JSON.stringify(form.categoryPricing)
           : "",
         galleryUrls: JSON.stringify(existingGallery),
       };
@@ -209,12 +268,15 @@ export default function AdminPackageForm() {
             occupancy: t.Occupency ?? t.Occupancy,
           }))
         : form.transfers,
-      paymentPolicy: j["Payment Policy"]
-        ? {
-            name: j["Payment Policy"].Name,
-            terms: j["Payment Policy"].terms,
-          }
-        : form.paymentPolicy,
+      paymentPolicies: j["Payment Policy"]
+        ? [
+            {
+              id: "pol-imported-" + Date.now(),
+              name: j["Payment Policy"].Name || j["Payment Policy"].name || "",
+              terms: j["Payment Policy"].terms || j["Payment Policy"].Terms || "",
+            }
+          ]
+        : form.paymentPolicies || [],
     };
     setForm(next);
     alert(`Imported "${next.title}". Review the fields and save.`);
@@ -253,7 +315,14 @@ export default function AdminPackageForm() {
             <input
               required
               value={form.title}
-              onChange={(e) => update("title", e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setForm((f) => ({
+                  ...f,
+                  title: val,
+                  slug: slugify(val),
+                }));
+              }}
               className="input"
             />
           </Field>
@@ -310,16 +379,74 @@ export default function AdminPackageForm() {
       </Card>
 
       <Card title="Pricing & duration">
-        <Grid>
-          <Field label="Nights"><input type="number" min="0" value={form.nights} onChange={(e) => update("nights", +e.target.value)} className="input" /></Field>
-          <Field label="Days"><input type="number" min="1" value={form.days} onChange={(e) => update("days", +e.target.value)} className="input" /></Field>
-          <Field label="Adult price (₹)" required><input required type="number" min="0" value={form.priceAdult} onChange={(e) => update("priceAdult", +e.target.value)} className="input" /></Field>
-          <Field label="Child price (₹)"><input type="number" min="0" value={form.priceChild} onChange={(e) => update("priceChild", +e.target.value)} className="input" /></Field>
-          <Field label="Original price (₹)"><input type="number" min="0" value={form.originalPrice} onChange={(e) => update("originalPrice", +e.target.value)} className="input" /></Field>
-          <Field label="Discount (%)"><input type="number" min="0" max="100" value={form.discount} onChange={(e) => update("discount", +e.target.value)} className="input" /></Field>
-          <Field label="Rating"><input type="number" min="0" max="5" step="0.1" value={form.rating} onChange={(e) => update("rating", +e.target.value)} className="input" /></Field>
-          <Field label="Review count"><input type="number" min="0" value={form.reviewCount} onChange={(e) => update("reviewCount", +e.target.value)} className="input" /></Field>
-        </Grid>
+        <div className="space-y-5">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Field label="Nights"><input type="number" min="0" value={form.nights} onChange={(e) => update("nights", +e.target.value)} className="input" /></Field>
+            <Field label="Days"><input type="number" min="1" value={form.days} onChange={(e) => update("days", +e.target.value)} className="input" /></Field>
+            <Field label="Rating"><input type="number" min="0" max="5" step="0.1" value={form.rating} onChange={(e) => update("rating", +e.target.value)} className="input" /></Field>
+            <Field label="Review count"><input type="number" min="0" value={form.reviewCount} onChange={(e) => update("reviewCount", +e.target.value)} className="input" /></Field>
+          </div>
+          
+          <div className="border-t border-gray-100 pt-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Tier-Based Pricing</h3>
+            <div className="space-y-4">
+              {["standard", "deluxe", "luxury"].map((tier) => {
+                const tierPrice = form.categoryPricing?.[tier] || { originalPriceAdult: 0, originalPriceChild: 0, discount: 0, priceAdult: 0, priceChild: 0 };
+                return (
+                  <div key={tier} className="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
+                    <span className="font-bold text-xs uppercase tracking-wider text-[var(--color-navy)] block mb-3 capitalize">{tier} Category Pricing</span>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                      <Field label="Adult Original Price (₹)">
+                        <input
+                          type="number"
+                          min="0"
+                          value={tierPrice.originalPriceAdult || ""}
+                          onChange={(e) => handleTierPriceChange(tier, "originalPriceAdult", +e.target.value)}
+                          className="input"
+                        />
+                      </Field>
+                      <Field label="Child Original Price (₹)">
+                        <input
+                          type="number"
+                          min="0"
+                          value={tierPrice.originalPriceChild || ""}
+                          onChange={(e) => handleTierPriceChange(tier, "originalPriceChild", +e.target.value)}
+                          className="input"
+                        />
+                      </Field>
+                      <Field label="Discount (%)">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={tierPrice.discount || ""}
+                          onChange={(e) => handleTierPriceChange(tier, "discount", +e.target.value)}
+                          className="input"
+                        />
+                      </Field>
+                      <Field label="Calculated Adult Price (₹)">
+                        <input
+                          type="number"
+                          readOnly
+                          value={tierPrice.priceAdult || 0}
+                          className="input bg-gray-100 text-gray-500 cursor-not-allowed font-semibold"
+                        />
+                      </Field>
+                      <Field label="Calculated Child Price (₹)">
+                        <input
+                          type="number"
+                          readOnly
+                          value={tierPrice.priceChild || 0}
+                          className="input bg-gray-100 text-gray-500 cursor-not-allowed font-semibold"
+                        />
+                      </Field>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </Card>
 
       <Card title="Images">
@@ -394,101 +521,223 @@ export default function AdminPackageForm() {
       </Card>
 
       <Card title="Hotels (Where you'll stay)">
-        <ol className="space-y-3">
+        <ol className="space-y-4">
           {form.hotels.map((h, i) => (
-            <li key={i} className="rounded-xl border border-gray-200 p-4">
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <span>Hotel {i + 1}</span>
+            <li key={i} className="rounded-xl border border-gray-200 p-4 bg-white shadow-sm">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-2 mb-3 text-xs text-gray-500">
+                <span className="font-bold text-[var(--color-navy)]">Hotel {i + 1}</span>
                 <button
                   type="button"
                   onClick={() => update("hotels", form.hotels.filter((_, idx) => idx !== i))}
-                  className="text-red-500"
+                  className="text-red-500 hover:underline font-semibold"
                 >
                   Remove
                 </button>
               </div>
-              <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                <input
-                  value={h.name || ""}
-                  onChange={(e) => {
-                    const next = [...form.hotels];
-                    next[i] = { ...next[i], name: e.target.value };
-                    update("hotels", next);
-                  }}
-                  placeholder="Hotel name"
-                  className="input"
-                />
-                <input
-                  value={h.propertyType || ""}
-                  onChange={(e) => {
-                    const next = [...form.hotels];
-                    next[i] = { ...next[i], propertyType: e.target.value };
-                    update("hotels", next);
-                  }}
-                  placeholder="Property type (e.g., Heritage Hotel)"
-                  className="input"
-                />
-                <input
-                  value={h.address || ""}
-                  onChange={(e) => {
-                    const next = [...form.hotels];
-                    next[i] = { ...next[i], address: e.target.value };
-                    update("hotels", next);
-                  }}
-                  placeholder="Address"
-                  className="input sm:col-span-2"
-                />
-                <input
-                  value={h.contactNumber || ""}
-                  onChange={(e) => {
-                    const next = [...form.hotels];
-                    next[i] = { ...next[i], contactNumber: e.target.value };
-                    update("hotels", next);
-                  }}
-                  placeholder="Contact number"
-                  className="input"
-                />
-                <input
-                  value={h.contactEmail || ""}
-                  onChange={(e) => {
-                    const next = [...form.hotels];
-                    next[i] = { ...next[i], contactEmail: e.target.value };
-                    update("hotels", next);
-                  }}
-                  placeholder="Contact email"
-                  className="input"
-                />
-                <input
-                  value={h.mapUrl || ""}
-                  onChange={(e) => {
-                    const next = [...form.hotels];
-                    next[i] = { ...next[i], mapUrl: e.target.value };
-                    update("hotels", next);
-                  }}
-                  placeholder="Google Maps URL"
-                  className="input sm:col-span-2"
-                />
-                <input
-                  type="number"
-                  min="1"
-                  max="5"
-                  value={h.starCategory || ""}
-                  onChange={(e) => {
-                    const next = [...form.hotels];
-                    next[i] = { ...next[i], starCategory: +e.target.value };
-                    update("hotels", next);
-                  }}
-                  placeholder="Star (1-5)"
-                  className="input"
-                />
+
+              <div className="mb-4 flex items-center gap-4">
+                <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
+                  <input
+                    type="radio"
+                    name={`hotel-source-${i}`}
+                    checked={!h.isCustom}
+                    onChange={() => {
+                      const next = [...form.hotels];
+                      next[i] = { ...next[i], isCustom: false, id: "", name: "", address: "", starCategory: 4, category: "standard", image: "", description: "" };
+                      update("hotels", next);
+                    }}
+                    className="accent-[var(--color-pink)]"
+                  />
+                  Select from Stays
+                </label>
+                <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
+                  <input
+                    type="radio"
+                    name={`hotel-source-${i}`}
+                    checked={!!h.isCustom}
+                    onChange={() => {
+                      const next = [...form.hotels];
+                      next[i] = { ...next[i], isCustom: true, name: "", address: "", starCategory: 4, category: "standard", image: "", description: "", mapUrl: "", contactNumber: "", contactEmail: "", propertyType: "" };
+                      update("hotels", next);
+                    }}
+                    className="accent-[var(--color-pink)]"
+                  />
+                  Create Custom Hotel
+                </label>
               </div>
+
+              {!h.isCustom ? (
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-gray-600">
+                    Select Stay
+                  </label>
+                  <select
+                    value={h.id || ""}
+                    onChange={(e) => {
+                      const selectedStay = stays.find((s) => s.id === e.target.value);
+                      if (selectedStay) {
+                        const next = [...form.hotels];
+                        next[i] = {
+                          ...next[i],
+                          id: selectedStay.id,
+                          name: selectedStay.name,
+                          propertyType: selectedStay.propertyType,
+                          starCategory: selectedStay.starCategory,
+                          category: selectedStay.tier || "standard",
+                          address: selectedStay.address,
+                          contactNumber: selectedStay.contactNumber,
+                          contactEmail: selectedStay.contactEmail,
+                          mapUrl: selectedStay.mapUrl,
+                          image: selectedStay.image,
+                          description: selectedStay.description,
+                          isCustom: false,
+                        };
+                        update("hotels", next);
+                      }
+                    }}
+                    className="input"
+                  >
+                    <option value="">— Choose a stay —</option>
+                    {stays.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.propertyType || "Stay"})
+                      </option>
+                    ))}
+                  </select>
+
+                  {h.name && (
+                    <div className="mt-3 flex gap-4 rounded-xl border border-gray-100 bg-gray-50 p-3">
+                      {h.image && (
+                        <img src={h.image} className="h-16 w-24 flex-shrink-0 rounded-lg object-cover border border-gray-200" alt={h.name} />
+                      )}
+                      <div>
+                        <div className="font-bold text-gray-900 text-sm">{h.name}</div>
+                        <div className="text-xs text-gray-500 font-medium capitalize mt-0.5">
+                          {h.propertyType || "Hotel"} · <span className="text-[var(--color-pink)] font-bold">{h.category || "standard"}</span>
+                        </div>
+                        <div className="text-xs text-[var(--color-gold)] font-bold mt-1">{"★".repeat(h.starCategory)}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <input
+                    value={h.name || ""}
+                    onChange={(e) => {
+                      const next = [...form.hotels];
+                      next[i] = { ...next[i], name: e.target.value };
+                      update("hotels", next);
+                    }}
+                    placeholder="Hotel name"
+                    className="input"
+                  />
+                  <input
+                    value={h.propertyType || ""}
+                    onChange={(e) => {
+                      const next = [...form.hotels];
+                      next[i] = { ...next[i], propertyType: e.target.value };
+                      update("hotels", next);
+                    }}
+                    placeholder="Property type (e.g., Heritage Hotel)"
+                    className="input"
+                  />
+                  <input
+                    value={h.address || ""}
+                    onChange={(e) => {
+                      const next = [...form.hotels];
+                      next[i] = { ...next[i], address: e.target.value };
+                      update("hotels", next);
+                    }}
+                    placeholder="Address"
+                    className="input sm:col-span-2"
+                  />
+                  <input
+                    value={h.contactNumber || ""}
+                    onChange={(e) => {
+                      const next = [...form.hotels];
+                      next[i] = { ...next[i], contactNumber: e.target.value };
+                      update("hotels", next);
+                    }}
+                    placeholder="Contact number"
+                    className="input"
+                  />
+                  <input
+                    value={h.contactEmail || ""}
+                    onChange={(e) => {
+                      const next = [...form.hotels];
+                      next[i] = { ...next[i], contactEmail: e.target.value };
+                      update("hotels", next);
+                    }}
+                    placeholder="Contact email"
+                    className="input"
+                  />
+                  <input
+                    value={h.mapUrl || ""}
+                    onChange={(e) => {
+                      const next = [...form.hotels];
+                      next[i] = { ...next[i], mapUrl: e.target.value };
+                      update("hotels", next);
+                    }}
+                    placeholder="Google Maps URL"
+                    className="input sm:col-span-2"
+                  />
+                  <select
+                    value={h.category || "standard"}
+                    onChange={(e) => {
+                      const next = [...form.hotels];
+                      next[i] = { ...next[i], category: e.target.value };
+                      update("hotels", next);
+                    }}
+                    className="input"
+                  >
+                    <option value="standard">Standard Category</option>
+                    <option value="deluxe">Deluxe Category</option>
+                    <option value="luxury">Luxury Category</option>
+                  </select>
+                  <input
+                    type="number"
+                    min="1"
+                    max="5"
+                    value={h.starCategory || ""}
+                    onChange={(e) => {
+                      const next = [...form.hotels];
+                      next[i] = { ...next[i], starCategory: +e.target.value };
+                      update("hotels", next);
+                    }}
+                    placeholder="Star (1-5)"
+                    className="input"
+                  />
+                  <input
+                    value={h.image || ""}
+                    onChange={(e) => {
+                      const next = [...form.hotels];
+                      next[i] = { ...next[i], image: e.target.value };
+                      update("hotels", next);
+                    }}
+                    placeholder="Image URL (optional)"
+                    className="input sm:col-span-2"
+                  />
+                  <textarea
+                    rows={2}
+                    value={h.description || ""}
+                    onChange={(e) => {
+                      const next = [...form.hotels];
+                      next[i] = { ...next[i], description: e.target.value };
+                      update("hotels", next);
+                    }}
+                    placeholder="Short description (optional)"
+                    className="input sm:col-span-2"
+                  />
+                </div>
+              )}
             </li>
           ))}
         </ol>
         <button
           type="button"
-          onClick={() => update("hotels", [...form.hotels, { name: "", propertyType: "", starCategory: 4 }])}
-          className="mt-3 rounded-full border border-dashed border-[var(--color-pink)] px-4 py-2 text-xs font-bold text-[var(--color-pink)]"
+          onClick={() => update("hotels", [...form.hotels, { name: "", propertyType: "", starCategory: 4, category: "standard", isCustom: false }])}
+          className="mt-3 rounded-full border border-dashed border-[var(--color-pink)] px-4 py-2 text-xs font-bold text-[var(--color-pink)] cursor-pointer"
         >
           + Add hotel
         </button>
@@ -555,29 +804,63 @@ export default function AdminPackageForm() {
       </Card>
 
       <Card title="Payment & Cancellation Policy">
-        <Grid>
-          <Field label="Policy name">
-            <input
-              value={form.paymentPolicy?.name || ""}
-              onChange={(e) =>
-                update("paymentPolicy", { ...form.paymentPolicy, name: e.target.value })
-              }
-              placeholder="e.g., Standard Installment Plan"
-              className="input"
-            />
-          </Field>
-        </Grid>
-        <Field label="Terms" className="mt-3">
-          <textarea
-            rows={4}
-            value={form.paymentPolicy?.terms || ""}
-            onChange={(e) =>
-              update("paymentPolicy", { ...form.paymentPolicy, terms: e.target.value })
-            }
-            placeholder="30% at booking, 40% 60 days before departure…"
-            className="input"
-          />
-        </Field>
+        <div className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <Field label="Add policy" className="flex-1">
+              <select
+                onChange={(e) => {
+                  const pid = e.target.value;
+                  if (!pid) return;
+                  const selected = availablePolicies.find(p => p.id === pid);
+                  if (selected) {
+                    if (form.paymentPolicies?.some(p => p.id === selected.id)) {
+                      alert("This policy is already attached to this package.");
+                      e.target.value = "";
+                      return;
+                    }
+                    update("paymentPolicies", [...(form.paymentPolicies || []), selected]);
+                  }
+                  e.target.value = "";
+                }}
+                className="input"
+              >
+                <option value="">— Select policy to attach —</option>
+                {availablePolicies.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+
+          {form.paymentPolicies && form.paymentPolicies.length > 0 ? (
+            <div className="space-y-3">
+              <span className="block text-[11px] font-bold uppercase tracking-wider text-gray-600">
+                Attached Policies
+              </span>
+              <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-gray-50/50 p-2">
+                {form.paymentPolicies.map((p, idx) => (
+                  <div key={p.id || idx} className="flex items-start justify-between gap-4 p-3 first:pt-2 last:pb-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="font-bold text-sm text-[var(--color-navy)] block">{p.name}</span>
+                      <p className="mt-1 text-xs text-gray-600 line-clamp-2 leading-relaxed">{p.terms}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        update("paymentPolicies", form.paymentPolicies.filter((_, i) => i !== idx));
+                      }}
+                      className="text-xs font-bold text-red-500 hover:underline cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400 italic">No policies attached. Attach a policy above.</p>
+          )}
+        </div>
       </Card>
 
       <Card title="SEO meta">
@@ -609,40 +892,88 @@ export default function AdminPackageForm() {
       </Card>
 
       <Card title="Itinerary">
-        <ol className="space-y-3">
+        <ol className="space-y-4">
           {form.itinerary.map((d, i) => (
-            <li key={i} className="rounded-xl border border-gray-200 p-4">
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <span>Day {d.day}</span>
+            <li key={i} className="rounded-xl border border-gray-200 p-4 bg-gray-50/30">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-2 mb-3 text-xs text-gray-500">
+                <span className="font-bold text-[var(--color-navy)]">Day {d.day}</span>
                 <button
                   type="button"
                   onClick={() => update("itinerary", form.itinerary.filter((_, idx) => idx !== i).map((x, idx) => ({ ...x, day: idx + 1 })))}
-                  className="text-red-500"
+                  className="text-red-500 hover:underline font-semibold"
                 >
                   Remove
                 </button>
               </div>
-              <input
-                value={d.title}
-                onChange={(e) => {
-                  const next = [...form.itinerary];
-                  next[i] = { ...next[i], title: e.target.value };
-                  update("itinerary", next);
-                }}
-                placeholder="Day title"
-                className="input mt-2"
-              />
-              <textarea
-                rows={2}
-                value={d.description}
-                onChange={(e) => {
-                  const next = [...form.itinerary];
-                  next[i] = { ...next[i], description: e.target.value };
-                  update("itinerary", next);
-                }}
-                placeholder="Day description"
-                className="input mt-2"
-              />
+              <div className="space-y-3">
+                <input
+                  value={d.title}
+                  onChange={(e) => {
+                    const next = [...form.itinerary];
+                    next[i] = { ...next[i], title: e.target.value };
+                    update("itinerary", next);
+                  }}
+                  placeholder="Day title"
+                  className="input"
+                />
+                <textarea
+                  rows={2}
+                  value={d.description}
+                  onChange={(e) => {
+                    const next = [...form.itinerary];
+                    next[i] = { ...next[i], description: e.target.value };
+                    update("itinerary", next);
+                  }}
+                  placeholder="Day description"
+                  className="input"
+                />
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <label className="block">
+                    <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-gray-600">Location</span>
+                    <input
+                      value={d.location || ""}
+                      onChange={(e) => {
+                        const next = [...form.itinerary];
+                        next[i] = { ...next[i], location: e.target.value };
+                        update("itinerary", next);
+                      }}
+                      placeholder="e.g., Jaipur, Rajasthan"
+                      className="input"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-gray-600">Meals</span>
+                    <select
+                      value={d.meals || ""}
+                      onChange={(e) => {
+                        const next = [...form.itinerary];
+                        next[i] = { ...next[i], meals: e.target.value };
+                        update("itinerary", next);
+                      }}
+                      className="input"
+                    >
+                      <option value="">— Select meal plan —</option>
+                      <option value="B">Breakfast (B)</option>
+                      <option value="CP">Continental Plan (CP)</option>
+                      <option value="MAP">Breakfast + Dinner (MAP)</option>
+                      <option value="AP">All Meals (AP)</option>
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-gray-600">Transfer Sharing</span>
+                    <input
+                      value={d.transferSharing || ""}
+                      onChange={(e) => {
+                        const next = [...form.itinerary];
+                        next[i] = { ...next[i], transferSharing: e.target.value };
+                        update("itinerary", next);
+                      }}
+                      placeholder="e.g., Private, Sharing"
+                      className="input"
+                    />
+                  </label>
+                </div>
+              </div>
             </li>
           ))}
         </ol>
@@ -651,10 +982,10 @@ export default function AdminPackageForm() {
           onClick={() =>
             update("itinerary", [
               ...form.itinerary,
-              { day: form.itinerary.length + 1, title: "", description: "" },
+              { day: form.itinerary.length + 1, title: "", description: "", location: "", meals: "", transferSharing: "", hotels: [] },
             ])
           }
-          className="mt-3 rounded-full border border-dashed border-[var(--color-pink)] px-4 py-2 text-xs font-bold text-[var(--color-pink)]"
+          className="mt-4 rounded-full border border-dashed border-[var(--color-pink)] px-4 py-2 text-xs font-bold text-[var(--color-pink)] cursor-pointer"
         >
           + Add day
         </button>

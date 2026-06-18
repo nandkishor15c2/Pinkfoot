@@ -1,12 +1,14 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../../lib/auth.jsx";
 import Logo from "../../components/Logo.jsx";
-import { Icon, Sparkles, PackageBox, Map, Inbox } from "../../components/icons/index.jsx";
+import { Icon, Sparkles, PackageBox, Map, Inbox, Bed, Shield } from "../../components/icons/index.jsx";
 
 const nav = [
   { to: "/admin", end: true, label: "Dashboard", IconComp: Sparkles },
   { to: "/admin/packages", label: "Packages", IconComp: PackageBox },
   { to: "/admin/destinations", label: "Destinations", IconComp: Map },
+  { to: "/admin/stays", label: "Stays", IconComp: Bed },
+  { to: "/admin/policies", label: "Policies", IconComp: Shield },
   { to: "/admin/leads", label: "Leads", IconComp: Inbox },
 ];
 

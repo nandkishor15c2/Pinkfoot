@@ -26,9 +26,36 @@ import {
   Wallet,
   Check,
   XCircle,
+  ChevronDown,
 } from "../components/icons/index.jsx";
 
-const TABS = ["Overview", "Itinerary", "Hotels", "Inclusions", "Policy", "Reviews"];
+const getStaysForCategory = (pkg, category) => {
+  if (!pkg || !pkg.hotels) return [];
+  return pkg.hotels.filter(h => h.category && h.category.toLowerCase() === category.toLowerCase());
+};
+
+const getItineraryHotelName = (originalName, category, pkg) => {
+  if (!pkg || !pkg.hotels) return null;
+  
+  let city = "";
+  if (originalName.toLowerCase().includes("jaipur")) city = "jaipur";
+  else if (originalName.toLowerCase().includes("jodhpur")) city = "jodhpur";
+  else if (originalName.toLowerCase().includes("udaipur")) city = "udaipur";
+  
+  if (city) {
+    const matchedHotel = pkg.hotels.find(
+      h => h.category && h.category.toLowerCase() === category.toLowerCase() && h.name.toLowerCase().includes(city)
+    );
+    if (matchedHotel) return matchedHotel.name;
+  }
+  
+  const matchedHotelByName = pkg.hotels.find(
+    h => h.name.toLowerCase() === originalName.toLowerCase() && h.category && h.category.toLowerCase() === category.toLowerCase()
+  );
+  return matchedHotelByName ? matchedHotelByName.name : null;
+};
+
+const TABS = ["Overview", "Itinerary", "Stays", "Inclusions", "Policy", "Reviews"];
 
 const MEAL_LABELS = {
   B: "Breakfast",
@@ -51,6 +78,28 @@ export default function ProductPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [mobileSheet, setMobileSheet] = useState(false);
+  const [stayCategory, setStayCategory] = useState("standard");
+  const [expandedDays, setExpandedDays] = useState({ 1: true });
+
+  const toggleDay = (d) => {
+    setExpandedDays((prev) => ({
+      ...prev,
+      [d]: !prev[d],
+    }));
+  };
+
+  const expandAll = () => {
+    if (!pkg?.itinerary) return;
+    const next = {};
+    pkg.itinerary.forEach((d) => {
+      next[d.day] = true;
+    });
+    setExpandedDays(next);
+  };
+
+  const collapseAll = () => {
+    setExpandedDays({});
+  };
 
   useEffect(() => {
     if (!mobileSheet) return;
@@ -63,6 +112,23 @@ export default function ProductPage() {
       window.removeEventListener("keydown", onKey);
     };
   }, [mobileSheet]);
+
+  useEffect(() => {
+    if (pkg) {
+      if (!pkg.hotels || pkg.hotels.length === 0) {
+        if (tab === "Stays") setTab("Overview");
+      } else {
+        const available = Array.from(new Set(
+          pkg.hotels.map(h => h.category?.toLowerCase()).filter(Boolean)
+        ));
+        const order = ["standard", "deluxe", "luxury"];
+        const active = order.find(cat => available.includes(cat)) || available[0];
+        if (active) {
+          setStayCategory(active);
+        }
+      }
+    }
+  }, [pkg]);
 
   useSEO(pkg ? {
     title: pkg.metaTitle || `${pkg.title} | Pinkfoot Travel`,
@@ -89,7 +155,35 @@ export default function ProductPage() {
   // useSEO sits here because pkg may be null in the early-return branch.
   // (We call it once with safe fallbacks.)
 
-  const total = adults * pkg.price.adult + children * pkg.price.child;
+  const currentPricing = pkg.categoryPricing?.[stayCategory] || {
+    priceAdult: pkg.price?.adult || 0,
+    priceChild: pkg.price?.child || 0,
+    originalPriceAdult: pkg.originalPrice || 0,
+    discount: pkg.discount || 0
+  };
+
+  const priceAdult = currentPricing.priceAdult;
+  const priceChild = currentPricing.priceChild;
+  const originalPrice = currentPricing.originalPriceAdult;
+  const discount = currentPricing.discount;
+  const total = adults * priceAdult + children * priceChild;
+
+  const availableCategories = Array.from(new Set(
+    (pkg.hotels || [])
+      .map(h => h.category?.toLowerCase())
+      .filter(Boolean)
+  ));
+  const order = ["standard", "deluxe", "luxury"];
+  const activeCategories = order.filter(cat => availableCategories.includes(cat));
+  const otherCategories = availableCategories.filter(cat => !order.includes(cat));
+  const allCategories = [...activeCategories, ...otherCategories];
+
+  const tabs = ["Overview", "Itinerary"];
+  if (pkg.hotels && pkg.hotels.length > 0) {
+    tabs.push("Stays");
+  }
+  tabs.push("Inclusions", "Policy", "Reviews");
+
   const similar = (allPackages || [])
     .filter((p) => p.id !== pkg.id && (p.destination === pkg.destination || p.theme.some((t) => pkg.theme.includes(t))))
     .slice(0, 3);
@@ -106,14 +200,14 @@ export default function ProductPage() {
         phone: enquiry.phone,
         travelers: `${adults} adult${adults > 1 ? "s" : ""}${children ? ` + ${children} child${children > 1 ? "ren" : ""}` : ""}`,
         travelDate: date,
-        message: enquiry.message,
+        message: `${enquiry.message || ""}\n[Stay Category: ${stayCategory.charAt(0).toUpperCase() + stayCategory.slice(1)}]`,
       });
       setSubmitted(true);
     } catch (err) {
       // backend offline → still mark as submitted so guest gets confirmation; persist locally
       try {
         const queue = JSON.parse(localStorage.getItem("pinkfoot_leads_queue") || "[]");
-        queue.push({ ...enquiry, packageSlug: pkg.slug, packageTitle: pkg.title, adults, children, date, at: new Date().toISOString() });
+        queue.push({ ...enquiry, packageSlug: pkg.slug, packageTitle: pkg.title, adults, children, date, stayCategory, at: new Date().toISOString() });
         localStorage.setItem("pinkfoot_leads_queue", JSON.stringify(queue));
         setSubmitted(true);
       } catch {
@@ -184,16 +278,15 @@ export default function ProductPage() {
       )}
 
       <div className="container-page grid gap-8 pb-24 lg:pb-20 lg:grid-cols-[minmax(0,1fr)_340px]">
-        {/* LEFT: tabs */}
         <div className="min-w-0">
           <div className="sticky top-[72px] z-30 flex gap-2 overflow-x-auto rounded-2xl bg-white p-2 shadow-[var(--shadow-card)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {TABS.map((t) => (
+            {tabs.map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 className={`flex-shrink-0 rounded-xl px-5 py-2.5 text-sm font-semibold transition ${
                   tab === t
-                    ? "bg-[var(--color-pink)] text-white shadow"
+                    ? "bg-[var(--color-pink)] text-white shadow-sm"
                     : "text-gray-700 hover:bg-[var(--color-pink-pale)]"
                 }`}
               >
@@ -278,113 +371,193 @@ export default function ProductPage() {
 
             {tab === "Itinerary" && (
               <div className="rounded-2xl bg-white p-7 shadow-[var(--shadow-card)]">
-                <h2 className="mb-6 font-display text-2xl font-bold text-[var(--color-navy)]">
-                  Day-by-Day Itinerary
-                </h2>
-                <ol className="relative space-y-6 border-l-2 border-[var(--color-pink-pale)] pl-7">
+                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 pb-4 mb-6">
+                  <div>
+                    <h2 className="font-display text-2xl font-bold text-[var(--color-navy)]">
+                      Day-by-Day Itinerary
+                    </h2>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Click on any day to see details, meals, and stays.
+                    </p>
+                  </div>
+                  <div className="flex gap-2 text-xs font-bold">
+                    <button
+                      onClick={expandAll}
+                      className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-gray-600 hover:border-[var(--color-pink)] hover:text-[var(--color-pink)] transition cursor-pointer"
+                    >
+                      Expand All
+                    </button>
+                    <button
+                      onClick={collapseAll}
+                      className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-gray-600 hover:border-[var(--color-pink)] hover:text-[var(--color-pink)] transition cursor-pointer"
+                    >
+                      Collapse All
+                    </button>
+                  </div>
+                </div>
+
+                <ol className="relative space-y-6 border-l-2 border-[var(--color-pink-pale)] pl-8">
                   {pkg.itinerary.map((day) => (
                     <li key={day.day} className="relative">
-                      <span className="absolute -left-[34px] grid h-8 w-8 place-items-center rounded-full bg-[var(--color-pink)] text-xs font-bold text-white shadow-md">
+                      {/* Accordion Trigger/Header */}
+                      <span className={`absolute -left-[49px] grid h-8 w-8 place-items-center rounded-full text-xs font-bold shadow-md transition-colors duration-250 cursor-pointer ${
+                        expandedDays[day.day] ? "bg-[var(--color-pink)] text-white" : "bg-white text-gray-700 border border-gray-200"
+                      }`} onClick={() => toggleDay(day.day)}>
                         {day.day}
                       </span>
-                      <h3 className="font-display text-lg font-bold text-[var(--color-navy)]">
-                        Day {day.day}: {day.title}
-                      </h3>
-                      {day.location && (
-                        <div className="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold text-[var(--color-pink)]">
-                          <Icon size={12}><MapPin /></Icon> {day.location}
-                        </div>
-                      )}
-                      <p className="mt-2 text-sm leading-relaxed text-gray-600">
-                        {day.description}
-                      </p>
-                      {(day.meals || day.transferSharing || day.hotels?.length > 0) && (
-                        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px]">
-                          {day.meals && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 font-semibold text-gray-700">
-                              <Icon size={11}><Utensils /></Icon> {MEAL_LABELS[day.meals] || day.meals}
-                            </span>
+                      
+                      <div
+                        onClick={() => toggleDay(day.day)}
+                        className="flex items-start justify-between gap-3 cursor-pointer group select-none"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-display text-base sm:text-lg font-bold text-[var(--color-navy)] group-hover:text-[var(--color-pink)] transition-colors duration-150">
+                            Day {day.day}: {day.title}
+                          </h3>
+                          {day.location && (
+                            <div className="mt-1 flex items-center gap-1 text-[11px] font-bold text-[var(--color-pink)]">
+                              <Icon size={11}><MapPin /></Icon> {day.location}
+                            </div>
                           )}
-                          {day.transferSharing && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 font-semibold text-gray-700">
-                              <Icon size={11}><Bus /></Icon> {day.transferSharing}
-                            </span>
+                          {!expandedDays[day.day] && day.description && (
+                            <p className="mt-1 text-xs text-gray-500 line-clamp-1 max-w-xl">
+                              {day.description}
+                            </p>
                           )}
-                          {day.hotels?.map((h) => (
-                            <span
-                              key={h}
-                              className="inline-flex items-center gap-1 rounded-full bg-[var(--color-pink-pale)] px-2.5 py-1 font-semibold text-[var(--color-pink)]"
-                            >
-                              <Icon size={11}><Bed /></Icon> {h}
-                            </span>
-                          ))}
                         </div>
-                      )}
+                        <motion.span
+                          animate={{ rotate: expandedDays[day.day] ? 180 : 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="mt-1 text-gray-400 group-hover:text-[var(--color-pink)] transition-colors"
+                        >
+                          <Icon size={16}><ChevronDown /></Icon>
+                        </motion.span>
+                      </div>
+
+                      {/* Collapsible Content */}
+                      <motion.div
+                        initial={false}
+                        animate={{ height: expandedDays[day.day] ? "auto" : 0, opacity: expandedDays[day.day] ? 1 : 0 }}
+                        transition={{ duration: 0.25, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pt-2">
+                          <p className="text-sm leading-relaxed text-gray-600">
+                            {day.description}
+                          </p>
+                          {(day.meals || day.transferSharing) && (
+                            <div className="mt-3.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+                              {day.meals && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 font-semibold text-gray-700">
+                                  <Icon size={11}><Utensils /></Icon> {MEAL_LABELS[day.meals] || day.meals}
+                                </span>
+                              )}
+                              {day.transferSharing && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 font-semibold text-gray-700">
+                                  <Icon size={11}><Bus /></Icon> {day.transferSharing}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
                     </li>
                   ))}
                 </ol>
               </div>
             )}
 
-            {tab === "Hotels" && (
+            {tab === "Stays" && (
               <div className="rounded-2xl bg-white p-7 shadow-[var(--shadow-card)]">
-                <h2 className="font-display text-2xl font-bold text-[var(--color-navy)]">
-                  Where You'll Stay
-                </h2>
-                <p className="mt-1 text-sm text-gray-500">
-                  Carefully selected heritage and luxury stays across your route.
-                </p>
-                {pkg.hotels?.length > 0 ? (
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 pb-4">
+                  <div>
+                    <h2 className="font-display text-2xl font-bold text-[var(--color-navy)]">
+                      Where You'll Stay
+                    </h2>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Carefully selected heritage and luxury stays across your route.
+                    </p>
+                  </div>
+                  {allCategories.length > 1 && (
+                    <div className="flex gap-1.5 rounded-xl bg-[var(--color-navy-light)] p-1">
+                      {allCategories.map((cat) => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setStayCategory(cat)}
+                          className={`rounded-lg px-3.5 py-1.5 text-xs font-bold capitalize transition cursor-pointer ${
+                            stayCategory === cat
+                              ? "bg-[var(--color-pink)] text-white shadow-sm"
+                              : "text-gray-600 hover:text-[var(--color-navy)]"
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {getStaysForCategory(pkg, stayCategory).length > 0 ? (
                   <div className="mt-5 grid gap-4 md:grid-cols-2">
-                    {pkg.hotels.map((h) => (
+                    {getStaysForCategory(pkg, stayCategory).map((h) => (
                       <div
                         key={h.id || h.name}
-                        className="overflow-hidden rounded-2xl border border-gray-100 bg-[var(--color-off-white)] p-5"
+                        className="overflow-hidden rounded-2xl border border-gray-100 bg-[var(--color-off-white)] p-4 flex flex-col sm:flex-row gap-4"
                       >
-                        <div className="flex items-start justify-between gap-3">
+                        {h.image && (
+                          <div className="h-32 w-full sm:w-44 flex-shrink-0 overflow-hidden rounded-xl bg-gray-100">
+                            <img src={h.image} alt={h.name} className="h-full w-full object-cover transition-transform hover:scale-105 duration-300" />
+                          </div>
+                        )}
+                        <div className="flex-1 flex flex-col justify-between min-w-0">
                           <div>
-                            <div className="font-display text-lg font-bold text-[var(--color-navy)]">
-                              {h.name}
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <h3 className="font-display text-base font-bold text-[var(--color-navy)] leading-snug">
+                                  {h.name}
+                                </h3>
+                                <div className="mt-0.5 text-xs text-gray-500 font-medium capitalize">
+                                  {h.propertyType || "Hotel"}
+                                </div>
+                              </div>
+                              {h.starCategory > 0 && (
+                                <span className="flex-shrink-0 rounded-full bg-[var(--color-gold)]/10 px-2 py-0.5 text-[10px] font-bold text-[var(--color-gold)]">
+                                  {"★".repeat(h.starCategory)}
+                                </span>
+                              )}
                             </div>
-                            <div className="mt-0.5 text-xs text-gray-500">
-                              {h.propertyType}
-                            </div>
+                            {h.address && (
+                              <div className="mt-2 flex items-start gap-1 text-xs text-gray-600 leading-normal">
+                                <span className="mt-0.5 flex-shrink-0 text-gray-400"><Icon size={12}><MapPin /></Icon></span>
+                                <span>{h.address}</span>
+                              </div>
+                            )}
+                            {h.description && (
+                              <p className="mt-2 text-xs text-gray-500 line-clamp-2 leading-relaxed">
+                                {h.description}
+                              </p>
+                            )}
                           </div>
-                          {h.starCategory > 0 && (
-                            <span className="rounded-full bg-[var(--color-gold)]/15 px-2.5 py-1 text-[11px] font-bold text-[var(--color-gold)]">
-                              {"★".repeat(h.starCategory)}
-                            </span>
+                          {h.mapUrl && (
+                            <div className="mt-3">
+                              <a
+                                href={h.mapUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-pink)] hover:underline"
+                              >
+                                View on map →
+                              </a>
+                            </div>
                           )}
                         </div>
-                        {h.address && (
-                          <div className="mt-3 inline-flex items-center gap-1.5 text-xs text-gray-600">
-                            <Icon size={12}><MapPin /></Icon> {h.address}
-                          </div>
-                        )}
-                        <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-gray-500">
-                          {h.contactNumber && (
-                            <span className="inline-flex items-center gap-1"><Icon size={11}><Phone /></Icon> {h.contactNumber}</span>
-                          )}
-                          {h.contactEmail && (
-                            <span className="inline-flex items-center gap-1"><Icon size={11}><Mail /></Icon> {h.contactEmail}</span>
-                          )}
-                        </div>
-                        {h.mapUrl && (
-                          <a
-                            href={h.mapUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-pink)] hover:underline"
-                          >
-                            View on map →
-                          </a>
-                        )}
                       </div>
                     ))}
                   </div>
                 ) : (
                   <p className="mt-4 text-sm text-gray-500">
-                    Hotel details will be shared at booking confirmation.
+                    Stay details will be shared at booking confirmation.
                   </p>
                 )}
               </div>
@@ -395,14 +568,29 @@ export default function ProductPage() {
                 <h2 className="font-display text-2xl font-bold text-[var(--color-navy)]">
                   Payment & Cancellation Policy
                 </h2>
-                {pkg.paymentPolicy?.terms ? (
+                {pkg.paymentPolicies && pkg.paymentPolicies.length > 0 ? (
+                  <div className="mt-4 space-y-6">
+                    {pkg.paymentPolicies.map((policy, idx) => (
+                      <div key={policy.id || idx} className={idx > 0 ? "border-t border-gray-100 pt-6" : ""}>
+                        {policy.name && (
+                          <div className="inline-block rounded-full bg-[var(--color-navy)] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white">
+                            {policy.name}
+                          </div>
+                        )}
+                        <p className="mt-3 whitespace-pre-line leading-relaxed text-gray-700 text-sm">
+                          {policy.terms}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : pkg.paymentPolicy?.terms ? (
                   <>
                     {pkg.paymentPolicy.name && (
                       <div className="mt-3 inline-block rounded-full bg-[var(--color-navy)] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white">
                         {pkg.paymentPolicy.name}
                       </div>
                     )}
-                    <p className="mt-4 whitespace-pre-line leading-relaxed text-gray-700">
+                    <p className="mt-4 whitespace-pre-line leading-relaxed text-gray-700 text-sm">
                       {pkg.paymentPolicy.terms}
                     </p>
                   </>
@@ -514,7 +702,6 @@ export default function ProductPage() {
             )}
           </motion.div>
 
-          {/* Similar packages */}
           {similar.length > 0 && (
             <div className="mt-10">
               <h2 className="mb-6 font-display text-2xl font-bold text-[var(--color-navy)]">
@@ -529,7 +716,6 @@ export default function ProductPage() {
           )}
         </div>
 
-        {/* RIGHT: sticky booking sidebar — desktop only */}
         <aside className="hidden min-w-0 space-y-4 lg:block">
           <div className="sticky top-24 rounded-2xl bg-white p-5 shadow-[var(--shadow-card)]">
             <BookingBody
@@ -540,23 +726,28 @@ export default function ProductPage() {
               total={total}
               onSendEnquiry={() => document.getElementById("enquiry-form")?.scrollIntoView({ behavior: "smooth" })}
               onShowPolicy={() => setTab("Policy")}
+              stayCategory={stayCategory} setStayCategory={setStayCategory}
+              priceAdult={priceAdult}
+              priceChild={priceChild}
+              allCategories={allCategories}
+              originalPrice={originalPrice}
+              discount={discount}
             />
           </div>
         </aside>
       </div>
 
-      {/* MOBILE: fixed bottom price bar */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--color-pink-mid)]/40 bg-white/95 backdrop-blur-md shadow-[0_-8px_30px_rgba(27,42,74,0.12)] lg:hidden">
         <div className="container-page flex items-center justify-between gap-3 py-2.5">
           <div className="min-w-0">
             <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">From</div>
             <div className="flex items-baseline gap-1">
               <span className="font-display text-xl font-extrabold tabular-nums text-[var(--color-navy)]">
-                ₹{pkg.price.adult.toLocaleString("en-IN")}
+                ₹{priceAdult.toLocaleString("en-IN")}
               </span>
               <span className="text-[11px] text-gray-500">/person</span>
-              {pkg.discount > 0 && (
-                <span className="ml-1 badge-green !px-1.5 !py-0 !text-[9px]">{pkg.discount}% OFF</span>
+              {discount > 0 && (
+                <span className="ml-1 badge-green !px-1.5 !py-0 !text-[9px]">{discount}% OFF</span>
               )}
             </div>
           </div>
@@ -571,7 +762,6 @@ export default function ProductPage() {
         <div className="pb-[max(0px,env(safe-area-inset-bottom))]" />
       </div>
 
-      {/* MOBILE: slide-up booking sheet */}
       <AnimatePresence>
         {mobileSheet && (
           <div className="fixed inset-0 z-50 lg:hidden">
@@ -617,13 +807,18 @@ export default function ProductPage() {
                   }, 200);
                 }}
                 onShowPolicy={() => { setMobileSheet(false); setTab("Policy"); }}
+                stayCategory={stayCategory} setStayCategory={setStayCategory}
+                priceAdult={priceAdult}
+                priceChild={priceChild}
+                allCategories={allCategories}
+                originalPrice={originalPrice}
+                discount={discount}
               />
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* ENQUIRY FORM */}
       <section id="enquiry-form" className="bg-white py-16">
         <div className="container-page grid gap-10 lg:grid-cols-[1.1fr_1fr]">
           <div>
@@ -727,13 +922,19 @@ function BookingBody({
   total,
   onSendEnquiry,
   onShowPolicy,
+  stayCategory, setStayCategory,
+  priceAdult,
+  priceChild,
+  allCategories = [],
+  originalPrice,
+  discount,
 }) {
   return (
     <>
       <PriceTag
-        price={pkg.price.adult}
-        original={pkg.originalPrice}
-        discount={pkg.discount}
+        price={priceAdult}
+        original={originalPrice}
+        discount={discount}
       />
       <div className="mt-1 text-xs text-gray-500">per adult, taxes included</div>
 
@@ -746,12 +947,38 @@ function BookingBody({
         </div>
         <Counter label="Adults" value={adults} setValue={setAdults} min={1} />
         <Counter label="Children" value={children} setValue={setChildren} min={0} />
+
+        {/* Stay Category Dropdown */}
+        {allCategories.length > 0 && (
+          <div>
+            <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-gray-600">
+              Stay Category
+            </label>
+            {allCategories.length > 1 ? (
+              <select
+                value={stayCategory}
+                onChange={(e) => setStayCategory(e.target.value)}
+                className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-xs font-semibold outline-none focus:border-[var(--color-pink)] transition cursor-pointer"
+              >
+                {allCategories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat.charAt(0).toUpperCase() + cat.slice(1)} Stay
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-xs font-semibold text-gray-700 capitalize">
+                {stayCategory} Stay
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="mt-5 space-y-2 border-t border-gray-100 pt-4 text-sm">
-        <Row label={`Adults × ${adults}`} value={`₹${(adults * pkg.price.adult).toLocaleString("en-IN")}`} />
+        <Row label={`Adults × ${adults}`} value={`₹${(adults * priceAdult).toLocaleString("en-IN")}`} />
         {children > 0 && (
-          <Row label={`Children × ${children}`} value={`₹${(children * pkg.price.child).toLocaleString("en-IN")}`} />
+          <Row label={`Children × ${children}`} value={`₹${(children * priceChild).toLocaleString("en-IN")}`} />
         )}
         <div className="my-2 h-px bg-gray-100" />
         <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -775,19 +1002,35 @@ function BookingBody({
         <span>Free cancellation 7+ days prior</span>
       </div>
 
-      {pkg.paymentPolicy && (
+      {pkg.paymentPolicies && pkg.paymentPolicies.length > 0 ? (
+        <div className="space-y-2.5 mt-5">
+          {pkg.paymentPolicies.map((policy, idx) => (
+            <div key={policy.id || idx} className="rounded-xl border border-[var(--color-pink-pale)] bg-[var(--color-pink-pale)]/40 p-3 text-[11px]">
+              <div className="inline-flex items-center gap-1.5 font-bold uppercase tracking-wider text-[var(--color-pink)]">
+                <Icon size={12}><Wallet /></Icon> {policy.name || "Payment plan"}
+              </div>
+              <button
+                onClick={onShowPolicy}
+                className="mt-1 line-clamp-2 text-left text-gray-600 hover:text-[var(--color-navy)] w-full block"
+              >
+                {policy.terms}
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : pkg.paymentPolicy ? (
         <div className="mt-5 rounded-xl border border-[var(--color-pink-pale)] bg-[var(--color-pink-pale)]/40 p-3 text-[11px]">
           <div className="inline-flex items-center gap-1.5 font-bold uppercase tracking-wider text-[var(--color-pink)]">
             <Icon size={12}><Wallet /></Icon> {pkg.paymentPolicy.name || "Payment plan"}
           </div>
           <button
             onClick={onShowPolicy}
-            className="mt-1 line-clamp-2 text-left text-gray-600 hover:text-[var(--color-navy)]"
+            className="mt-1 line-clamp-2 text-left text-gray-600 hover:text-[var(--color-navy)] w-full block"
           >
             {pkg.paymentPolicy.terms}
           </button>
         </div>
-      )}
+      ) : null}
     </>
   );
 }

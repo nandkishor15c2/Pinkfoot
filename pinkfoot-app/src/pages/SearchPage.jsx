@@ -25,6 +25,10 @@ export default function SearchPage() {
   const [filtersOpen, setFiltersOpen] = useState(true);
   const PANEL_IDS = ["destination", "budget", "themes", "duration", "rating"];
   const [openPanels, setOpenPanels] = useState(() => new Set(PANEL_IDS));
+  const [destDropdownOpen, setDestDropdownOpen] = useState(false);
+  const [headerDestQuery, setHeaderDestQuery] = useState("");
+  const [sidebarDestQuery, setSidebarDestQuery] = useState("");
+
   const togglePanel = (id) =>
     setOpenPanels((prev) => {
       const next = new Set(prev);
@@ -38,6 +42,48 @@ export default function SearchPage() {
   const { data: destinationsData } = useDestinations();
   const packages = packagesData || [];
   const destinations = destinationsData || [];
+
+  const filteredHeaderDests = useMemo(() => {
+    let list = destinations;
+    if (headerDestQuery) {
+      const q = headerDestQuery.toLowerCase();
+      list = destinations.filter(
+        (d) =>
+          d.name.toLowerCase().includes(q) ||
+          (d.country && d.country.toLowerCase().includes(q)) ||
+          (d.region && d.region.toLowerCase().includes(q))
+      );
+    }
+    // Sort selected destinations to the top
+    return [...list].sort((a, b) => {
+      const aSel = filters.destinations.includes(a.slug);
+      const bSel = filters.destinations.includes(b.slug);
+      if (aSel && !bSel) return -1;
+      if (!aSel && bSel) return 1;
+      return 0;
+    });
+  }, [headerDestQuery, destinations, filters.destinations]);
+
+  const filteredSidebarDests = useMemo(() => {
+    let list = destinations;
+    if (sidebarDestQuery) {
+      const q = sidebarDestQuery.toLowerCase();
+      list = destinations.filter(
+        (d) =>
+          d.name.toLowerCase().includes(q) ||
+          (d.country && d.country.toLowerCase().includes(q)) ||
+          (d.region && d.region.toLowerCase().includes(q))
+      );
+    }
+    // Sort selected destinations to the top
+    return [...list].sort((a, b) => {
+      const aSel = filters.destinations.includes(a.slug);
+      const bSel = filters.destinations.includes(b.slug);
+      if (aSel && !bSel) return -1;
+      if (!aSel && bSel) return 1;
+      return 0;
+    });
+  }, [sidebarDestQuery, destinations, filters.destinations]);
 
   useEffect(() => {
     const next = new URLSearchParams();
@@ -86,9 +132,9 @@ export default function SearchPage() {
     setFilters({ budget: null, duration: null, themes: [], rating: null, destinations: [] });
 
   return (
-    <main className="min-h-screen bg-[var(--color-off-white)] pt-[72px]">
+    <main className="min-h-screen bg-[var(--color-off-white)] pt-[72px] md:pt-[108px]">
       {/* Search header */}
-      <section className="bg-[var(--color-navy)] py-8">
+      <section className="bg-[var(--color-navy)] pt-16 pb-10">
         <div className="container-page">
           <h1 className="font-display text-3xl font-bold text-white">
             Find Your Perfect Holiday
@@ -106,31 +152,102 @@ export default function SearchPage() {
                 className="w-full rounded-full bg-white px-12 py-3.5 text-sm outline-none"
               />
             </div>
-            <select
-              value=""
-              onChange={(e) => {
-                const slug = e.target.value;
-                if (!slug) return;
-                setFilters((f) => ({
-                  ...f,
-                  destinations: f.destinations.includes(slug)
-                    ? f.destinations
-                    : [...f.destinations, slug],
-                }));
-              }}
-              className="rounded-full bg-white px-5 py-3.5 text-sm outline-none"
-            >
-              <option value="">
-                {filters.destinations.length
-                  ? `Destinations · ${filters.destinations.length}`
-                  : "Add destination"}
-              </option>
-              {destinations
-                .filter((d) => !filters.destinations.includes(d.slug))
-                .map((d) => (
-                  <option key={d.id} value={d.slug}>{d.name}</option>
-                ))}
-            </select>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setDestDropdownOpen((prev) => !prev)}
+                className="flex w-full md:w-auto items-center justify-between gap-3 rounded-full bg-white px-6 py-3.5 text-sm font-semibold text-[var(--color-navy)] outline-none cursor-pointer shadow-sm hover:bg-gray-50 transition min-w-[200px]"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="text-gray-400">
+                    <Icon size={16}><MapPin /></Icon>
+                  </span>
+                  <span>
+                    {filters.destinations.length
+                      ? `Destinations · ${filters.destinations.length}`
+                      : "Add destination"}
+                  </span>
+                </span>
+                <span className={`text-gray-400 transition-transform duration-200 ${destDropdownOpen ? "rotate-180" : ""}`}>
+                  <Icon size={14}><ChevronDown /></Icon>
+                </span>
+              </button>
+
+              <AnimatePresence>
+                {destDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-20 cursor-default"
+                      onClick={() => setDestDropdownOpen(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full z-30 mt-2 w-full md:w-80 rounded-2xl border border-gray-100 bg-white p-4 shadow-[var(--shadow-heavy)] animate-in fade-in"
+                    >
+                      <div className="relative mb-3">
+                        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
+                          <Icon size={14}><SearchIcon /></Icon>
+                        </span>
+                        <input
+                          type="text"
+                          value={headerDestQuery}
+                          onChange={(e) => setHeaderDestQuery(e.target.value)}
+                          placeholder="Search destinations..."
+                          className="w-full rounded-xl border border-gray-200 pl-9 pr-3 py-2.5 text-sm focus:border-[var(--color-pink)] focus:outline-none focus:ring-1 focus:ring-[var(--color-pink)] transition text-left"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="border border-gray-100 rounded-xl overflow-hidden divide-y divide-gray-50 bg-white max-h-64 overflow-y-auto [scrollbar-width:thin]">
+                        {filteredHeaderDests.map((d) => {
+                          const isSelected = filters.destinations.includes(d.slug);
+                          return (
+                            <div
+                              key={d.id}
+                              className={`flex items-center justify-between px-4 py-3 transition ${
+                                isSelected ? "bg-rose-50/50" : "hover:bg-rose-50/20"
+                              }`}
+                            >
+                              <div className="min-w-0 flex-1 pr-2 text-left">
+                                <div className="text-sm font-semibold text-[var(--color-navy)] truncate">{d.name}</div>
+                                <div className="text-xs text-gray-500 mt-0.5 truncate">
+                                  {d.country} · {d.region}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFilters((f) => ({
+                                    ...f,
+                                    destinations: isSelected
+                                      ? f.destinations.filter((s) => s !== d.slug)
+                                      : [...f.destinations, d.slug],
+                                  }));
+                                }}
+                                className={`rounded-full px-3 py-1 text-xs font-bold transition flex-shrink-0 cursor-pointer ${
+                                  isSelected
+                                    ? "bg-rose-100 text-rose-700 hover:bg-rose-200"
+                                    : "bg-rose-50 text-rose-600 hover:bg-rose-100"
+                                }`}
+                              >
+                                {isSelected ? "Remove" : "Add"}
+                              </button>
+                            </div>
+                          );
+                        })}
+                        {filteredHeaderDests.length === 0 && (
+                          <div className="px-4 py-6 text-center text-sm text-gray-400">
+                            No destinations found
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </section>
@@ -194,39 +311,70 @@ export default function SearchPage() {
                   </div>
                   <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-4 [scrollbar-width:thin]">
 
-            {/* Destination (multi-select) */}
+            {/* Destination (multi-select search layout) */}
             <FilterGroup
               label="Destination"
               badge={filters.destinations.length}
               open={openPanels.has("destination")}
               onToggle={() => togglePanel("destination")}
             >
-              <div className="flex flex-wrap gap-2">
-                {destinations.map((d) => {
-                  const on = filters.destinations.includes(d.slug);
+              <div className="relative mb-3">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <Icon size={14}><SearchIcon /></Icon>
+                </span>
+                <input
+                  type="text"
+                  value={sidebarDestQuery}
+                  onChange={(e) => setSidebarDestQuery(e.target.value)}
+                  placeholder="Search destinations..."
+                  className="w-full rounded-xl border border-gray-200 pl-8 pr-3 py-2 text-xs focus:border-[var(--color-pink)] focus:outline-none focus:ring-1 focus:ring-[var(--color-pink)] transition"
+                />
+              </div>
+
+              <div className="border border-gray-100 rounded-2xl overflow-hidden divide-y divide-gray-50 bg-white shadow-sm max-h-[320px] overflow-y-auto [scrollbar-width:thin]">
+                {filteredSidebarDests.map((d) => {
+                  const isSelected = filters.destinations.includes(d.slug);
                   return (
-                    <button
+                    <div
                       key={d.id}
-                      type="button"
-                      onClick={() =>
-                        setFilters((f) => ({
-                          ...f,
-                          destinations: on
-                            ? f.destinations.filter((s) => s !== d.slug)
-                            : [...f.destinations, d.slug],
-                        }))
-                      }
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                        on
-                          ? "border-[var(--color-pink)] bg-[var(--color-pink-pale)] text-[var(--color-pink)]"
-                          : "border-gray-300 bg-white text-gray-700 hover:border-[var(--color-pink)]"
+                      className={`flex items-center justify-between px-3 py-2.5 transition ${
+                        isSelected ? "bg-rose-50/50" : "hover:bg-rose-50/20"
                       }`}
                     >
-                      <Icon size={12}>{on ? <Check /> : <MapPin />}</Icon> {d.name}
-                    </button>
+                      <div className="min-w-0 flex-1 pr-2 text-left">
+                        <div className="text-xs font-semibold text-[var(--color-navy)] truncate">{d.name}</div>
+                        <div className="text-[10px] text-gray-500 mt-0.5 truncate">
+                          {d.country} · {d.region}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFilters((f) => ({
+                            ...f,
+                            destinations: isSelected
+                              ? f.destinations.filter((s) => s !== d.slug)
+                              : [...f.destinations, d.slug],
+                          }));
+                        }}
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold transition flex-shrink-0 cursor-pointer ${
+                          isSelected
+                            ? "bg-rose-100 text-rose-700 hover:bg-rose-200"
+                            : "bg-rose-50 text-rose-600 hover:bg-rose-100"
+                        }`}
+                      >
+                        {isSelected ? "Remove" : "Add"}
+                      </button>
+                    </div>
                   );
                 })}
+                {filteredSidebarDests.length === 0 && (
+                  <div className="px-3 py-4 text-center text-xs text-gray-400">
+                    No destinations found
+                  </div>
+                )}
               </div>
+
               {filters.destinations.length > 0 && (
                 <button
                   type="button"

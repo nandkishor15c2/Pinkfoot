@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useId } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Icon, Camera, XCircle, Check } from "./icons/index.jsx";
 
@@ -36,6 +36,7 @@ export default function ImageUpload({
   helper,
 }) {
   const inputRef = useRef(null);
+  const uId = useId();
   const [drag, setDrag] = useState(false);
   const [err, setErr] = useState("");
 
@@ -89,7 +90,7 @@ export default function ImageUpload({
   return (
     <div>
       <label
-        htmlFor="image-upload-input"
+        htmlFor={uId}
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
         onDrop={onDrop}
@@ -114,7 +115,7 @@ export default function ImageUpload({
         </div>
         <input
           ref={inputRef}
-          id="image-upload-input"
+          id={uId}
           type="file"
           accept={accept}
           multiple={multiple}

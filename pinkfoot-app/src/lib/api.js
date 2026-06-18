@@ -69,6 +69,28 @@ export const api = {
     request(`/api/leads/${id}`, { method: "PATCH", body: { status }, auth: true }),
   adminDeleteLead: (id) => request(`/api/leads/${id}`, { method: "DELETE", auth: true }),
 
+  adminListStays: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/api/stays${q ? `?${q}` : ""}`, { auth: true });
+  },
+  adminCreateStay: (formData) =>
+    request("/api/stays", { method: "POST", body: formData, auth: true, formData: true }),
+  adminUpdateStay: (id, formData) =>
+    request(`/api/stays/${id}`, { method: "PUT", body: formData, auth: true, formData: true }),
+  adminDeleteStay: (id) =>
+    request(`/api/stays/${id}`, { method: "DELETE", auth: true }),
+
+  adminListPolicies: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/api/policies${q ? `?${q}` : ""}`, { auth: true });
+  },
+  adminCreatePolicy: (data) =>
+    request("/api/policies", { method: "POST", body: data, auth: true }),
+  adminUpdatePolicy: (id, data) =>
+    request(`/api/policies/${id}`, { method: "PUT", body: data, auth: true }),
+  adminDeletePolicy: (id) =>
+    request(`/api/policies/${id}`, { method: "DELETE", auth: true }),
+
   // Generic single-image upload — returns { url, filename, size }
   adminUploadImage: (file) => {
     const fd = new FormData();

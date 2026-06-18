@@ -76,13 +76,13 @@ router.post("/", requireAdmin, uploadFields, (req, res) => {
         rating, review_count, cover_image, gallery, inclusions, exclusions, highlights,
         badge, itinerary, published,
         description, meta_title, meta_description, meta_keywords,
-        tags, hotels, transfers, payment_policy)
+        tags, hotels, transfers, payment_policy, category_pricing)
       VALUES (@id, @slug, @title, @destination, @destination_name, @theme,
         @nights, @days, @price_adult, @price_child, @currency, @original_price, @discount,
         @rating, @review_count, @cover_image, @gallery, @inclusions, @exclusions, @highlights,
         @badge, @itinerary, @published,
         @description, @meta_title, @meta_description, @meta_keywords,
-        @tags, @hotels, @transfers, @payment_policy)
+        @tags, @hotels, @transfers, @payment_policy, @category_pricing)
     `).run({
       id,
       slug,
@@ -115,6 +115,7 @@ router.post("/", requireAdmin, uploadFields, (req, res) => {
       hotels: JSON.stringify(b.hotels ? JSON.parse(b.hotels) : []),
       transfers: JSON.stringify(b.transfers ? JSON.parse(b.transfers) : []),
       payment_policy: b.paymentPolicy ? JSON.stringify(JSON.parse(b.paymentPolicy)) : null,
+      category_pricing: b.categoryPricing ? JSON.stringify(JSON.parse(b.categoryPricing)) : null,
     });
 
     const row = db.prepare("SELECT * FROM packages WHERE id = ?").get(id);
@@ -168,6 +169,7 @@ router.put("/:id", requireAdmin, uploadFields, (req, res) => {
       hotels = COALESCE(@hotels, hotels),
       transfers = COALESCE(@transfers, transfers),
       payment_policy = COALESCE(@payment_policy, payment_policy),
+      category_pricing = COALESCE(@category_pricing, category_pricing),
       updated_at = CURRENT_TIMESTAMP
     WHERE id = @id
   `).run({
@@ -202,6 +204,7 @@ router.put("/:id", requireAdmin, uploadFields, (req, res) => {
     hotels: b.hotels ? JSON.stringify(JSON.parse(b.hotels)) : null,
     transfers: b.transfers ? JSON.stringify(JSON.parse(b.transfers)) : null,
     payment_policy: b.paymentPolicy ? JSON.stringify(JSON.parse(b.paymentPolicy)) : null,
+    category_pricing: b.categoryPricing ? JSON.stringify(JSON.parse(b.categoryPricing)) : null,
   });
 
   const row = db.prepare("SELECT * FROM packages WHERE id = ?").get(req.params.id);

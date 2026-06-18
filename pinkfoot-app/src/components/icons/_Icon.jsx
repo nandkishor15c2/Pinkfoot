@@ -14,6 +14,9 @@ import {
   useEffect,
   useRef,
   useState,
+  Children,
+  cloneElement,
+  isValidElement,
 } from "react";
 import { useAnimation, useInView } from "framer-motion";
 
@@ -134,16 +137,23 @@ export function Icon({
 
   const ctx = { controls, animation, loop, loopDelay, active };
 
+  const scaledChildren = Children.map(children, (child) => {
+    if (isValidElement(child)) {
+      return cloneElement(child, { size });
+    }
+    return child;
+  });
+
   return (
     <IconCtx.Provider value={ctx}>
       <span
         ref={ref}
         onClick={onClick}
         className={`inline-flex items-center justify-center ${className || ""}`}
-        style={{ width: size, height: size, color, lineHeight: 0 }}
+        style={{ width: size, height: size, color, lineHeight: 0, verticalAlign: "middle" }}
         {...rest}
       >
-        {children}
+        {scaledChildren}
       </span>
     </IconCtx.Provider>
   );

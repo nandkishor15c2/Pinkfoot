@@ -17,7 +17,7 @@ console.log(`  reviews:      ${reviews.length}`);
 
 const wipe = process.argv.includes("--wipe");
 if (wipe) {
-  db.exec("DELETE FROM reviews; DELETE FROM packages; DELETE FROM destinations;");
+  db.exec("DELETE FROM reviews; DELETE FROM packages; DELETE FROM destinations; DELETE FROM stays; DELETE FROM policies;");
   console.log("  (wiped existing rows)");
 }
 
@@ -52,6 +52,18 @@ const insPkg = db.prepare(`
 const insRev = db.prepare(`
   INSERT OR REPLACE INTO reviews (id, package_slug, name, location, avatar, rating, comment, travel_date)
   VALUES (@id, @package_slug, @name, @location, @avatar, @rating, @comment, @travel_date)
+`);
+
+const insStay = db.prepare(`
+  INSERT OR REPLACE INTO stays (id, name, property_type, star_category, tier, destination,
+    contact_number, contact_email, address, map_url, image, description)
+  VALUES (@id, @name, @property_type, @star_category, @tier, @destination,
+    @contact_number, @contact_email, @address, @map_url, @image, @description)
+`);
+
+const insPolicy = db.prepare(`
+  INSERT OR REPLACE INTO policies (id, name, terms)
+  VALUES (@id, @name, @terms)
 `);
 
 const txn = db.transaction(() => {
@@ -114,7 +126,7 @@ const txn = db.transaction(() => {
       tags:      JSON.stringify(p.tags      || []),
       hotels:    JSON.stringify(p.hotels    || []),
       transfers: JSON.stringify(p.transfers || []),
-      payment_policy: p.paymentPolicy ? JSON.stringify(p.paymentPolicy) : null,
+      payment_policy: p.paymentPolicy ? JSON.stringify(Array.isArray(p.paymentPolicy) ? p.paymentPolicy : [p.paymentPolicy]) : null,
     });
   }
   for (const r of reviews) {
@@ -129,6 +141,45 @@ const txn = db.transaction(() => {
       travel_date: r.date || "",
     });
   }
+
+  const seededStays = new Map();
+  for (const p of packages) {
+    if (p.hotels) {
+      for (const h of p.hotels) {
+        if (!seededStays.has(h.name)) {
+          seededStays.set(h.name, {
+            id: h.id || `HTL-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`,
+            name: h.name,
+            property_type: h.propertyType || "Hotel",
+            star_category: h.starCategory || 4,
+            tier: h.category || "standard",
+            destination: p.destination || "",
+            contact_number: h.contactNumber || "",
+            contact_email: h.contactEmail || "",
+            address: h.address || "",
+            map_url: h.mapUrl || "",
+            image: h.image || "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80",
+            description: h.description || `Beautiful stay in ${h.address || p.destinationName}.`,
+          });
+        }
+      }
+    }
+  }
+  for (const s of seededStays.values()) {
+    insStay.run(s);
+  }
+
+  insPolicy.run({
+    id: "pol-standard",
+    name: "Standard Installment Plan",
+    terms: "30% at booking, 40% 60 days before departure, remaining 30% 30 days before departure. Free cancellation up to 45 days before departure. 50% refund between 44–30 days. No refund after 30 days."
+  });
+
+  insPolicy.run({
+    id: "pol-flexible",
+    name: "Flexible Refund Policy",
+    terms: "10% at booking, 90% 15 days before departure. Free cancellation up to 14 days before departure. No refund if cancelled within 14 days."
+  });
 });
 txn();
 
