@@ -36,7 +36,7 @@ app.use("/api/stays", stays);
 app.use("/api/policies", policies);
 
 // Serve frontend built static assets
-const FRONTEND_DIST = path.resolve(__dirname, "..", "..", "pinkfoot-app", "dist");
+const FRONTEND_DIST = path.resolve(__dirname, "..", "public");
 app.use(express.static(FRONTEND_DIST));
 
 // Handle client-side routing by serving index.html for non-API routes
