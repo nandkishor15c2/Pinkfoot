@@ -55,6 +55,90 @@ const getItineraryHotelName = (originalName, category, pkg) => {
   return matchedHotelByName ? matchedHotelByName.name : null;
 };
 
+function StayCard({ stay }) {
+  const [activeImageIdx, setActiveImageIdx] = useState(0);
+
+  const gallery = stay.gallery || stay.images || (stay.image ? [stay.image] : []);
+  const currentImage = gallery[activeImageIdx] || stay.image;
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-gray-100 bg-[var(--color-off-white)] p-4 flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col gap-2 flex-shrink-0 w-full sm:w-44">
+        {currentImage && (
+          <div className="h-32 w-full overflow-hidden rounded-xl bg-gray-100 shadow-sm">
+            <img
+              src={currentImage}
+              alt={stay.name}
+              className="h-full w-full object-cover transition-transform hover:scale-105 duration-300"
+            />
+          </div>
+        )}
+        {gallery.length > 1 && (
+          <div className="flex gap-1 overflow-x-auto pb-1 max-w-full scrollbar-thin">
+            {gallery.map((img, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setActiveImageIdx(i)}
+                className={`relative h-8 w-12 flex-shrink-0 overflow-hidden rounded-md border-2 transition cursor-pointer ${
+                  activeImageIdx === i ? "border-[var(--color-pink)] scale-95" : "border-transparent opacity-80 hover:opacity-100"
+                }`}
+              >
+                <img src={img} alt="" className="h-full w-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="flex-1 flex flex-col justify-between min-w-0">
+        <div>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="font-display text-base font-bold text-[var(--color-navy)] leading-snug">
+                {stay.name}
+              </h3>
+              <div className="mt-0.5 text-xs text-gray-500 font-medium capitalize">
+                {stay.propertyType || "Hotel"}
+              </div>
+            </div>
+            {stay.starCategory > 0 && (
+              <span className="flex-shrink-0 rounded-full bg-[var(--color-gold)]/10 px-2 py-0.5 text-[10px] font-bold text-[var(--color-gold)]">
+                {"★".repeat(stay.starCategory)}
+              </span>
+            )}
+          </div>
+          {stay.address && (
+            <div className="mt-2 flex items-start gap-1 text-xs text-gray-600 leading-normal">
+              <span className="mt-0.5 flex-shrink-0 text-gray-400">
+                <Icon size={12}><MapPin /></Icon>
+              </span>
+              <span>{stay.address}</span>
+            </div>
+          )}
+          {stay.description && (
+            <p className="mt-2 text-xs text-gray-500 line-clamp-2 leading-relaxed">
+              {stay.description}
+            </p>
+          )}
+        </div>
+        {stay.mapUrl && (
+          <div className="mt-3">
+            <a
+              href={stay.mapUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-pink)] hover:underline"
+            >
+              View on map →
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const TABS = ["Overview", "Itinerary", "Stays", "Inclusions", "Policy", "Reviews"];
 
 const MEAL_LABELS = {
@@ -501,58 +585,7 @@ export default function ProductPage() {
                 {getStaysForCategory(pkg, stayCategory).length > 0 ? (
                   <div className="mt-5 grid gap-4 md:grid-cols-2">
                     {getStaysForCategory(pkg, stayCategory).map((h) => (
-                      <div
-                        key={h.id || h.name}
-                        className="overflow-hidden rounded-2xl border border-gray-100 bg-[var(--color-off-white)] p-4 flex flex-col sm:flex-row gap-4"
-                      >
-                        {h.image && (
-                          <div className="h-32 w-full sm:w-44 flex-shrink-0 overflow-hidden rounded-xl bg-gray-100">
-                            <img src={h.image} alt={h.name} className="h-full w-full object-cover transition-transform hover:scale-105 duration-300" />
-                          </div>
-                        )}
-                        <div className="flex-1 flex flex-col justify-between min-w-0">
-                          <div>
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <h3 className="font-display text-base font-bold text-[var(--color-navy)] leading-snug">
-                                  {h.name}
-                                </h3>
-                                <div className="mt-0.5 text-xs text-gray-500 font-medium capitalize">
-                                  {h.propertyType || "Hotel"}
-                                </div>
-                              </div>
-                              {h.starCategory > 0 && (
-                                <span className="flex-shrink-0 rounded-full bg-[var(--color-gold)]/10 px-2 py-0.5 text-[10px] font-bold text-[var(--color-gold)]">
-                                  {"★".repeat(h.starCategory)}
-                                </span>
-                              )}
-                            </div>
-                            {h.address && (
-                              <div className="mt-2 flex items-start gap-1 text-xs text-gray-600 leading-normal">
-                                <span className="mt-0.5 flex-shrink-0 text-gray-400"><Icon size={12}><MapPin /></Icon></span>
-                                <span>{h.address}</span>
-                              </div>
-                            )}
-                            {h.description && (
-                              <p className="mt-2 text-xs text-gray-500 line-clamp-2 leading-relaxed">
-                                {h.description}
-                              </p>
-                            )}
-                          </div>
-                          {h.mapUrl && (
-                            <div className="mt-3">
-                              <a
-                                href={h.mapUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-pink)] hover:underline"
-                              >
-                                View on map →
-                              </a>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      <StayCard key={h.id || h.name} stay={h} />
                     ))}
                   </div>
                 ) : (

@@ -55,10 +55,10 @@ const insRev = db.prepare(`
 `);
 
 const insStay = db.prepare(`
-  INSERT OR REPLACE INTO stays (id, name, property_type, star_category, tier, destination,
-    contact_number, contact_email, address, map_url, image, description)
-  VALUES (@id, @name, @property_type, @star_category, @tier, @destination,
-    @contact_number, @contact_email, @address, @map_url, @image, @description)
+  INSERT OR REPLACE INTO stays (id, slug, name, property_type, star_category, tier, destination,
+    contact_number, contact_email, address, map_url, image, gallery, description)
+  VALUES (@id, @slug, @name, @property_type, @star_category, @tier, @destination,
+    @contact_number, @contact_email, @address, @map_url, @image, @gallery, @description)
 `);
 
 const insPolicy = db.prepare(`
@@ -142,13 +142,23 @@ const txn = db.transaction(() => {
     });
   }
 
+  const slugify = (str) =>
+    str.toString().toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
   const seededStays = new Map();
   for (const p of packages) {
     if (p.hotels) {
       for (const h of p.hotels) {
         if (!seededStays.has(h.name)) {
+          const mainImg = h.image || "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80";
+          const galleryArr = [
+            mainImg,
+            "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=80",
+            "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=600&q=80"
+          ];
           seededStays.set(h.name, {
             id: h.id || `HTL-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`,
+            slug: slugify(h.name),
             name: h.name,
             property_type: h.propertyType || "Hotel",
             star_category: h.starCategory || 4,
@@ -158,7 +168,8 @@ const txn = db.transaction(() => {
             contact_email: h.contactEmail || "",
             address: h.address || "",
             map_url: h.mapUrl || "",
-            image: h.image || "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80",
+            image: mainImg,
+            gallery: JSON.stringify(galleryArr),
             description: h.description || `Beautiful stay in ${h.address || p.destinationName}.`,
           });
         }

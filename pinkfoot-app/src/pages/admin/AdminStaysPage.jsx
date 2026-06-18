@@ -27,8 +27,17 @@ const TIERS = [
   { value: "premium", label: "Premium" },
 ];
 
+const slugify = (s) =>
+  s
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
 const EMPTY_STAY = {
   name: "",
+  slug: "",
   propertyType: "",
   starCategory: 4,
   tier: "",
@@ -47,8 +56,10 @@ export default function AdminStaysPage() {
   const [isEdit, setIsEdit] = useState(false);
   const [editId, setEditId] = useState(null);
   
-  const [imageFiles, setImageFiles] = useState([]);
-  const [existingImages, setExistingImages] = useState([]);
+  const [coverFile, setCoverFile] = useState(null);
+  const [existingCover, setExistingCover] = useState("");
+  const [galleryFiles, setGalleryFiles] = useState([]);
+  const [existingGallery, setExistingGallery] = useState([]);
   
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
@@ -77,6 +88,7 @@ export default function AdminStaysPage() {
     setEditId(stay.id);
     setForm({
       name: stay.name || "",
+      slug: stay.slug || stay.id || "",
       propertyType: stay.propertyType || "",
       starCategory: stay.starCategory || 4,
       tier: stay.tier || "",
@@ -87,8 +99,10 @@ export default function AdminStaysPage() {
       mapUrl: stay.mapUrl || "",
       description: stay.description || "",
     });
-    setExistingImages(stay.images || []);
-    setImageFiles([]);
+    setExistingCover(stay.image || "");
+    setCoverFile(null);
+    setExistingGallery(stay.gallery || []);
+    setGalleryFiles([]);
     setErr("");
     setSuccess("");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -98,8 +112,10 @@ export default function AdminStaysPage() {
     setIsEdit(false);
     setEditId(null);
     setForm(EMPTY_STAY);
-    setExistingImages([]);
-    setImageFiles([]);
+    setExistingCover("");
+    setCoverFile(null);
+    setExistingGallery([]);
+    setGalleryFiles([]);
     setErr("");
     setSuccess("");
   };
@@ -114,9 +130,17 @@ export default function AdminStaysPage() {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => fd.append(k, v));
       
-      fd.append("imageUrls", JSON.stringify(existingImages));
-      imageFiles.forEach((file) => {
-        fd.append("image", file);
+      // Append cover
+      if (coverFile) {
+        fd.append("coverImage", coverFile);
+      } else {
+        fd.append("coverImage", existingCover);
+      }
+
+      // Append gallery
+      fd.append("galleryUrls", JSON.stringify(existingGallery));
+      galleryFiles.forEach((file) => {
+        fd.append("gallery", file);
       });
 
       if (isEdit) {
@@ -223,8 +247,28 @@ export default function AdminStaysPage() {
               <input
                 required
                 value={form.name}
-                onChange={(e) => updateField("name", e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setForm((f) => ({
+                    ...f,
+                    name: val,
+                    slug: isEdit ? f.slug : slugify(val),
+                  }));
+                }}
                 placeholder="e.g., Taj Bali Resort"
+                className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-xs outline-none focus:border-[var(--color-pink)]"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-gray-600">
+                Slug (URL) <span className="text-[var(--color-pink)]">*</span>
+              </span>
+              <input
+                required
+                value={form.slug}
+                onChange={(e) => updateField("slug", e.target.value)}
+                placeholder="e.g., taj-bali-resort"
                 className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-xs outline-none focus:border-[var(--color-pink)]"
               />
             </label>
@@ -343,18 +387,35 @@ export default function AdminStaysPage() {
             />
           </label>
 
-          <div>
-            <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-gray-600">
-              Image
-            </span>
-            <ImageUpload
-              multiple
-              existing={existingImages}
-              files={imageFiles}
-              onFilesChange={setImageFiles}
-              onRemoveExisting={(idx) => setExistingImages((prev) => prev.filter((_, i) => i !== idx))}
-              helper="Drag & drop, or click to upload multiple images. JPG/PNG/WEBP, up to 8 MB each."
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-gray-600">
+                Cover Image
+              </span>
+              <ImageUpload
+                existing={existingCover || null}
+                files={coverFile ? [coverFile] : []}
+                onFilesChange={(fs) => {
+                  setCoverFile(fs[0] || null);
+                  if (fs[0]) setExistingCover("");
+                }}
+                onRemoveExisting={() => setExistingCover("")}
+                helper="JPG/PNG/WEBP, up to 8 MB."
+              />
+            </div>
+            <div>
+              <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-gray-600">
+                Gallery Images
+              </span>
+              <ImageUpload
+                multiple
+                existing={existingGallery}
+                files={galleryFiles}
+                onFilesChange={setGalleryFiles}
+                onRemoveExisting={(idx) => setExistingGallery((prev) => prev.filter((_, i) => i !== idx))}
+                helper="Drag & drop or click to upload multiple images."
+              />
+            </div>
           </div>
 
           <label className="block">

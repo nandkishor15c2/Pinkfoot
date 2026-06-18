@@ -152,6 +152,10 @@ addCol("destinations", "activity",            "TEXT");
 addCol("destinations", "region_type",         "TEXT");
 addCol("destinations", "region_keywords",     "TEXT");
 
+// Stays migrations
+addCol("stays", "slug", "TEXT");
+addCol("stays", "gallery", "TEXT");
+
 export default db;
 
 export function rowToDestination(r) {
@@ -226,11 +230,42 @@ export function rowToPackage(r) {
 
 export function rowToStay(r) {
   if (!r) return null;
-  const parsedImages = r.image ? (
-    r.image.startsWith("[") ? JSON.parse(r.image) : [r.image]
-  ) : [];
+  
+  // Parse gallery with safe fallback to legacy image column if gallery is empty
+  let gallery = [];
+  if (r.gallery) {
+    try {
+      gallery = JSON.parse(r.gallery);
+    } catch (e) {
+      gallery = [];
+    }
+  } else if (r.image && r.image.startsWith("[")) {
+    try {
+      gallery = JSON.parse(r.image);
+    } catch (e) {
+      gallery = [];
+    }
+  } else if (r.image) {
+    gallery = [r.image];
+  }
+
+  // Cover image fallback
+  let image = r.image || "";
+  if (image.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(image);
+      image = parsed[0] || "";
+    } catch (e) {
+      image = "";
+    }
+  }
+  if (!image && gallery.length > 0) {
+    image = gallery[0];
+  }
+
   return {
     id: r.id,
+    slug: r.slug || r.id,
     name: r.name,
     propertyType: r.property_type,
     starCategory: r.star_category,
@@ -240,8 +275,9 @@ export function rowToStay(r) {
     contactEmail: r.contact_email,
     address: r.address,
     mapUrl: r.map_url,
-    image: parsedImages[0] || "",
-    images: parsedImages,
+    image,
+    gallery,
+    images: gallery, // alias for safety
     description: r.description,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
