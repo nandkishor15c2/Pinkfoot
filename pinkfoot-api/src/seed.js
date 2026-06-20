@@ -195,4 +195,6 @@ const txn = db.transaction(() => {
 txn();
 
 console.log("✓ Seed complete.");
-db.close();
+if (process.argv[1] && (process.argv[1].endsWith("seed.js") || process.argv[1].endsWith("seed"))) {
+  db.close();
+}
