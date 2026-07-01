@@ -13,6 +13,7 @@ import auth from "./routes/auth.js";
 import uploads from "./routes/uploads.js";
 import stays from "./routes/stays.js";
 import policies from "./routes/policies.js";
+import { UPLOAD_DIR } from "./upload.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -20,9 +21,7 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 
 app.use(cors({ origin: CORS_ORIGIN.split(","), credentials: false }));
 app.use(express.json({ limit: "2mb" }));
-app.use("/uploads", express.static(path.resolve(__dirname, "..", "uploads"), {
-  maxAge: "30d",
-}));
+app.use("/uploads", express.static(UPLOAD_DIR, { maxAge: "30d" }));
 
 app.get("/api/health", (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 app.use("/api/auth", auth);

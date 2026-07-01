@@ -4,7 +4,7 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const UPLOAD_DIR = path.resolve(__dirname, "..", "uploads");
+export const UPLOAD_DIR = process.env.UPLOADS_DIR || path.resolve(__dirname, "..", "uploads");
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const storage = multer.diskStorage({
