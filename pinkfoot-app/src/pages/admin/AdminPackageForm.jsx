@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { api } from "../../lib/api.js";
 import ImageUpload from "../../components/ImageUpload.jsx";
+import RichTextEditor from "../../components/RichTextEditor.jsx";
 
 const THEMES = ["Honeymoon", "Family", "Adventure", "Luxury", "Beach", "Culture", "Shopping"];
 const BADGES = ["", "Best Seller", "Premium", "Hot Deal", "Family Favourite", "Family Pick", "Weekend Deal"];
@@ -916,16 +917,14 @@ export default function AdminPackageForm() {
                   placeholder="Day title"
                   className="input"
                 />
-                <textarea
-                  rows={2}
+                <RichTextEditor
                   value={d.description}
-                  onChange={(e) => {
+                  onChange={(val) => {
                     const next = [...form.itinerary];
-                    next[i] = { ...next[i], description: e.target.value };
+                    next[i] = { ...next[i], description: val };
                     update("itinerary", next);
                   }}
                   placeholder="Day description"
-                  className="input"
                 />
                 <div className="grid gap-3 sm:grid-cols-3">
                   <label className="block">

@@ -506,7 +506,7 @@ export default function ProductPage() {
                           )}
                           {!expandedDays[day.day] && day.description && (
                             <p className="mt-1 text-xs text-gray-500 line-clamp-1 max-w-xl">
-                              {day.description}
+                              {day.description.replace(/<[^>]+>/g, "")}
                             </p>
                           )}
                         </div>
@@ -527,9 +527,10 @@ export default function ProductPage() {
                         className="overflow-hidden"
                       >
                         <div className="pt-2">
-                          <p className="text-sm leading-relaxed text-gray-600">
-                            {day.description}
-                          </p>
+                          <div
+                            className="prose prose-sm max-w-none text-gray-600 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mt-1 [&_p:first-child]:mt-0 [&_li]:mt-0.5"
+                            dangerouslySetInnerHTML={{ __html: day.description || "" }}
+                          />
                           {(day.meals || day.transferSharing) && (
                             <div className="mt-3.5 flex flex-wrap items-center gap-1.5 text-[11px]">
                               {day.meals && (
